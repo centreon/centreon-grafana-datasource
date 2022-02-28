@@ -14,7 +14,7 @@ export const defaultQuery: Partial<MyQuery> = {
  */
 export interface MyDataSourceOptions extends DataSourceJsonData {
   url?: string;
-  access?: "proxy" | "backend";
+  access?: 'proxy' | 'backend';
   username?: string;
 }
 

@@ -1,5 +1,5 @@
 import React, { ChangeEvent, PureComponent } from 'react';
-import {Field, LegacyForms, Select} from '@grafana/ui';
+import { Field, LegacyForms, Select } from '@grafana/ui';
 import { DataSourcePluginOptionsEditorProps, SelectableValue } from '@grafana/data';
 import { MyDataSourceOptions, MySecureJsonData } from './types';
 import { ActionMeta } from '@grafana/ui/components/Select/types';
@@ -84,7 +84,6 @@ export class ConfigEditor extends PureComponent<Props, State> {
 
         <div className="gf-form">
           <Field>
-
             <Select options={selectOptions} value={selectedOption} onChange={this.onProxyChange} />
           </Field>
         </div>
