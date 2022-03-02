@@ -10,7 +10,7 @@
       "name": "Centreon",
       "url": "https://centreon.com"
     },
-    "keywords": [],
+    "keywords": ["centreon"],
     "logos": {
       "small": "img/logo.svg",
       "large": "img/logo.svg"
@@ -32,5 +32,31 @@
   "dependencies": {
     "grafanaDependency": ">=7.0.0",
     "plugins": []
-  }
+  },
+  "routes": [
+    {
+      "path": "centreon-login",
+      "url": "{{ .JsonData.centreonURL }}/api/latest/login",
+      "body": {
+        "security": {
+          "credentials": {
+            "login": "{{ .JsonData.username }}",
+            "password": "{{ .SecureJsonData.password }}"
+          }
+        }
+      }
+    },
+    {
+      "path": "centreon",
+      "url": "{{ .JsonData.centreonURL }}/api/latest/login",
+      "body": {
+        "security": {
+          "credentials": {
+            "login": "{{ .JsonData.username }}",
+            "password": "{{ .SecureJsonData.password }}"
+          }
+        }
+      }
+    }
+  ]
 }

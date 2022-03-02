@@ -4,11 +4,11 @@ import React, { ChangeEvent, PureComponent } from 'react';
 import { LegacyForms } from '@grafana/ui';
 import { QueryEditorProps } from '@grafana/data';
 import { DataSource } from './datasource';
-import { defaultQuery, MyDataSourceOptions, MyQuery } from './types';
+import { CentreonMetricOptions, defaultQuery, MyQuery } from './types';
 
 const { FormField } = LegacyForms;
 
-type Props = QueryEditorProps<DataSource, MyQuery, MyDataSourceOptions>;
+type Props = QueryEditorProps<DataSource, MyQuery, CentreonMetricOptions>;
 
 export class QueryEditor extends PureComponent<Props> {
   onQueryTextChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -23,9 +23,16 @@ export class QueryEditor extends PureComponent<Props> {
     onRunQuery();
   };
 
+  onFrequencyChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const { onChange, query, onRunQuery } = this.props;
+    onChange({ ...query, frequency: parseFloat(event.target.value) });
+    // executes the query
+    onRunQuery();
+  };
+
   render() {
     const query = defaults(this.props.query, defaultQuery);
-    const { queryText, constant } = query;
+    const { queryText, constant, frequency } = query;
 
     return (
       <div className="gf-form">
@@ -43,6 +50,13 @@ export class QueryEditor extends PureComponent<Props> {
           onChange={this.onQueryTextChange}
           label="Query Text"
           tooltip="Not used yet"
+        />
+        <FormField
+          width={4}
+          value={frequency}
+          onChange={this.onFrequencyChange}
+          label="Frequency"
+          type="number"
         />
       </div>
     );
