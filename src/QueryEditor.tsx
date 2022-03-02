@@ -51,13 +51,7 @@ export class QueryEditor extends PureComponent<Props> {
           label="Query Text"
           tooltip="Not used yet"
         />
-        <FormField
-          width={4}
-          value={frequency}
-          onChange={this.onFrequencyChange}
-          label="Frequency"
-          type="number"
-        />
+        <FormField width={4} value={frequency} onChange={this.onFrequencyChange} label="Frequency" type="number" />
       </div>
     );
   }
