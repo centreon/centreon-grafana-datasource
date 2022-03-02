@@ -37,7 +37,7 @@ export enum ERoutes {
   API = '/centreon',
 }
 
-export interface ILoginResult {
+export interface CentreonLoginResult {
   contact: {
     id: number;
     name: string;

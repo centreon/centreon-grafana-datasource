@@ -1,7 +1,7 @@
 import { DataQueryRequest, DataQueryResponse, DataSourceApi, DataSourceInstanceSettings } from '@grafana/data';
 import { getBackendSrv } from '@grafana/runtime';
 
-import { CentreonMetricOptions, EAccess, ERoutes, ILoginResult, MyQuery } from './types';
+import { CentreonMetricOptions, EAccess, ERoutes, CentreonLoginResult, MyQuery } from './types';
 
 export class DataSource extends DataSourceApi<MyQuery, CentreonMetricOptions> {
   private readonly centreonURL: string;
@@ -68,7 +68,7 @@ export class DataSource extends DataSourceApi<MyQuery, CentreonMetricOptions> {
         };
       }
 
-      const result: ILoginResult = await getBackendSrv().post(url, data);
+      const result: CentreonLoginResult = await getBackendSrv().post(url, data);
       this.token = result.security.token;
 
       return result.contact.alias;
