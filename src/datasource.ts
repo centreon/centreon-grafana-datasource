@@ -1,7 +1,7 @@
 import { DataQueryRequest, DataQueryResponse, DataSourceApi, DataSourceInstanceSettings } from '@grafana/data';
 import { getBackendSrv } from '@grafana/runtime';
 
-import { CentreonMetricOptions, EAccess, ERoutes, CentreonLoginResult, MyQuery } from './types';
+import { CentreonLoginResult, CentreonMetricOptions, EAccess, ERoutes, MyQuery } from './types';
 
 export class DataSource extends DataSourceApi<MyQuery, CentreonMetricOptions> {
   private readonly centreonURL: string;
@@ -56,8 +56,11 @@ export class DataSource extends DataSourceApi<MyQuery, CentreonMetricOptions> {
     try {
       let data: { security: { credentials: { login: string; password: string } } } | undefined;
 
-      let url = this.access === EAccess.BROWSER ? this.centreonURL + '/api/latest/login' : this.url + ERoutes.LOGIN;
-      if (this.access === EAccess.BROWSER) {
+      // access === EAccess.PROXY && this.password is not normal here . Except if you try to configure the datasource
+      const useProxy = this.access === EAccess.PROXY && !this.password;
+
+      let url = useProxy ? this.url + ERoutes.LOGIN : this.centreonURL + '/api/latest/login';
+      if (!useProxy) {
         data = {
           security: {
             credentials: {
@@ -89,6 +92,15 @@ export class DataSource extends DataSourceApi<MyQuery, CentreonMetricOptions> {
       a = '';
     }
     console.log(a);
+    if (!this.username) {
+      throw new Error('field Username is mandatory');
+    }
+    if (!this.centreonURL) {
+      throw new Error('field centreonURL is mandatory');
+    }
+    if (!this.password) {
+      throw new Error('field password is mandatory');
+    }
 
     const username = await this.authenticate();
     // Implement a health check for your data source.

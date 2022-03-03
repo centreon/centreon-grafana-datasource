@@ -1,7 +1,7 @@
 import React, { ChangeEvent, PureComponent } from 'react';
 import { InlineField, Input, Select } from '@grafana/ui';
 import { DataSourcePluginOptionsEditorProps, SelectableValue } from '@grafana/data';
-import { CentreonMetricOptions, EAccess, CentreonMetricSecureDatas } from './types';
+import { CentreonMetricOptions, CentreonMetricSecureDatas, EAccess } from './types';
 
 interface Props extends DataSourcePluginOptionsEditorProps<CentreonMetricOptions, CentreonMetricSecureDatas> {}
 
@@ -117,9 +117,9 @@ export class ConfigEditor extends PureComponent<Props, State> {
             labelWidth={20}
             grow={false}
           >
-            <Select<any>
+            <Select<EAccess>
               options={accessOptions}
-              value={accessOptions.find((option) => option.value === jsonData.access)}
+              value={accessOptions.find((option) => option.value === (jsonData.access || EAccess.PROXY))}
               onChange={this.onChangeAccessMode}
               width={40}
             />
