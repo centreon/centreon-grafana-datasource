@@ -4,6 +4,8 @@ export interface MyQuery extends DataQuery {
   queryText?: string;
   constant: number;
   frequency: number;
+
+  resource?: string;
 }
 
 export const defaultQuery: Partial<MyQuery> = {
@@ -35,6 +37,11 @@ export interface CentreonMetricOptions extends DataSourceJsonData {
 export enum ERoutes {
   LOGIN = '/centreon-login',
   API = '/centreon',
+}
+
+export interface MyVariableQuery {
+  namespace: string;
+  rawQuery: string;
 }
 
 export interface CentreonLoginResult {

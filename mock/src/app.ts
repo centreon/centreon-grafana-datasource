@@ -24,6 +24,28 @@ router.use((req, res, next) => {
   }
 });
 
+function ensureAuthenticated(req: express.Request, res: express.Response, next: Function) {
+  if (req.header('X-AUTH-TOKEN')) {
+    return next();
+  } else {
+    res.status(401).send('UNAUTHORIZED');
+  }
+}
+
+router.get('/resource', ensureAuthenticated, (req, res) => {
+  res.send([
+    { value: 'hostgroup', label: 'Host Group' },
+    { value: 'host', label: 'Host' },
+    { value: 'service', label: 'Service' },
+    { value: 'servicegroup', label: 'Service Group' },
+    { value: 'metaservice', label: 'Meta Service' },
+    { value: 'virtualmetric', label: 'Virtual Metric' },
+    { value: 'metric', label: 'Metric' },
+    { value: 'businessactivity', label: 'Business Activity' },
+    { value: 'anomalydetection', label: 'Anomaly Detection' },
+  ] as Array<{ value: string; label: string }>);
+});
+
 router.post('/api/latest/login', (req, res) => {
   const { body } = req;
 
