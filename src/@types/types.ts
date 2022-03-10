@@ -44,6 +44,7 @@ export interface MyVariableQuery {
   rawQuery: string;
 }
 
+
 export interface CentreonLoginResult {
   contact: {
     id: number;

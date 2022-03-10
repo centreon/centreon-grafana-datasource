@@ -1,7 +1,7 @@
 import React, { ChangeEvent, PureComponent } from 'react';
 import { InlineField, Input, Select } from '@grafana/ui';
 import { DataSourcePluginOptionsEditorProps, SelectableValue } from '@grafana/data';
-import { CentreonMetricOptions, CentreonMetricSecureDatas, EAccess } from './types';
+import { CentreonMetricOptions, CentreonMetricSecureDatas, EAccess } from './@types/types';
 
 interface Props extends DataSourcePluginOptionsEditorProps<CentreonMetricOptions, CentreonMetricSecureDatas> {}
 

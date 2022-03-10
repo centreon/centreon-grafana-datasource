@@ -4,7 +4,7 @@ import React, { ChangeEvent, PureComponent } from 'react';
 import { LegacyForms } from '@grafana/ui';
 import { QueryEditorProps } from '@grafana/data';
 import { CentreonDataSource } from './centreonDataSource';
-import { CentreonMetricOptions, defaultQuery, MyQuery } from './types';
+import { CentreonMetricOptions, defaultQuery, MyQuery } from './@types/types';
 
 const { FormField } = LegacyForms;
 

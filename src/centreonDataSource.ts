@@ -7,8 +7,8 @@ import {
   MetricFindValue,
   MutableDataFrame,
 } from '@grafana/data';
-import { getBackendSrv, getTemplateSrv } from '@grafana/runtime';
-import { lastValueFrom } from 'rxjs';
+import { FetchError, getBackendSrv, getTemplateSrv } from '@grafana/runtime';
+import { lastValueFrom, catchError } from 'rxjs';
 
 import {
   CentreonLoginResult,
@@ -18,9 +18,10 @@ import {
   ERoutes,
   MyQuery,
   MyVariableQuery,
-} from './types';
+} from './@types/types';
 import { defaults } from 'lodash';
 import { BackendSrvRequest, FetchResponse } from '@grafana/runtime/services/backendSrv';
+import { CentreonList } from './@types/centreonAPI';
 
 export class CentreonDataSource extends DataSourceApi<MyQuery, CentreonMetricOptions> {
   private readonly centreonURL: string;
@@ -46,7 +47,7 @@ export class CentreonDataSource extends DataSourceApi<MyQuery, CentreonMetricOpt
     if (centreonURL.slice(-1) === '/') {
       centreonURL = centreonURL.slice(0, -1);
     }
-    this.centreonURL = centreonURL;
+    this.centreonURL = centreonURL + '/api/latest';
     this.access = access;
     this.username = username;
     this.password = password;
@@ -125,7 +126,7 @@ export class CentreonDataSource extends DataSourceApi<MyQuery, CentreonMetricOpt
       // access === EAccess.PROXY && this.password is not normal here . Except if you try to configure the datasource
       const useProxy = this.access === EAccess.PROXY && !this.password;
 
-      let url = useProxy ? this.url + ERoutes.LOGIN : this.centreonURL + '/api/latest/login';
+      let url = useProxy ? this.url + ERoutes.LOGIN : this.centreonURL + '/login';
       if (!useProxy) {
         data = {
           security: {
@@ -161,7 +162,6 @@ export class CentreonDataSource extends DataSourceApi<MyQuery, CentreonMetricOpt
         await this.authenticate();
       }
 
-      debugger;
       //this.authenticate populate this.token or throw an error
       authHeaders['X-AUTH-TOKEN'] = this.token!;
     }
@@ -172,10 +172,33 @@ export class CentreonDataSource extends DataSourceApi<MyQuery, CentreonMetricOpt
       headers: {
         ...authHeaders,
         ...request.headers,
-      }
+      },
     });
 
-    return lastValueFrom(reqObs);
+    console.log(opts.retry);
+
+    //if crash, retry
+    const res = reqObs.pipe(
+      catchError(async (err, caught) => {
+        if (opts.retry) {
+          if ((err as FetchError<{ message: string }>).data?.message) {
+            const fetchError: FetchError<{
+              message: string;
+              error: string;
+              response: string;
+            }> = err;
+            throw new Error(`${fetchError.data?.error} : ${fetchError.data?.message}`);
+          }
+
+          throw err;
+        } else {
+          await this.authenticate();
+          return this.call<T>(request, { retry: true });
+        }
+      })
+    );
+
+    return lastValueFrom(res);
   }
 
   async testDatasource() {
@@ -199,9 +222,20 @@ export class CentreonDataSource extends DataSourceApi<MyQuery, CentreonMetricOpt
 
   async getResourceList(): Promise<Array<{ value: string; label: string }>> {
     return (
-      await this.call<Array<{ value: string; label: string }>>({
-        url: '/resource',
+      await this.call<CentreonList<string>>({
+        url: '/data-source/types',
       })
-    ).data;
+    ).data.result.map((data) => ({ label: data, value: data }));
+  }
+
+  async getResources(resourceType: string, search?: string) {
+    return (
+      await this.call<CentreonList<{ id: string; name: string }>>({
+        url: `/data-source/${resourceType}`,
+        params: {
+          search,
+        },
+      })
+    ).data.result.map(({ id, name }) => ({ label: name, value: id }));
   }
 }

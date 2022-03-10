@@ -48,15 +48,7 @@
     },
     {
       "path": "centreon",
-      "url": "{{ .JsonData.centreonURL }}/api/latest/login",
-      "body": {
-        "security": {
-          "credentials": {
-            "login": "{{ .JsonData.username }}",
-            "password": "{{ .SecureJsonData.password }}"
-          }
-        }
-      }
+      "url": "{{ .JsonData.centreonURL }}/api/latest"
     }
   ]
 }
