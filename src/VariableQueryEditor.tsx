@@ -3,29 +3,13 @@ import { CentreonMetricOptions, MyQuery } from './@types/types';
 import { QueryEditorProps, SelectableValue } from '@grafana/data';
 import { CentreonDataSource } from './centreonDataSource';
 import { Alert, AsyncSelect, Button, HorizontalGroup, InlineField, Select } from '@grafana/ui';
-
-interface ISavedFilter {
-  type: SelectableValue<string>;
-  filter: SelectableValue<string>;
-}
+import { ISavedFilter } from './ISavedFilter';
 
 interface VariableQueryEditorState extends MyQuery {
   filters?: Array<ISavedFilter>;
 }
 
 type filter = ISavedFilter & { type: SelectableValue<string> & { valid?: boolean } };
-// interface IFilter {
-//   type: {
-//     value: string;
-//     valid: boolean;
-//   };
-//   filter: {
-//     value?: string;
-//     label?: string;
-//     valid?: boolean;
-//     loading?: boolean;
-//   };
-// }
 
 const resourcesLoaded: Record<'__types' | string, Array<SelectableValue<string>>> = {};
 
@@ -33,7 +17,7 @@ export const VariableQueryEditor: React.FC<
   QueryEditorProps<CentreonDataSource, MyQuery, CentreonMetricOptions, VariableQueryEditorState>
 > = (props) => {
   const { query, onChange } = props;
-  console.log(onChange);
+
   const [state, setState] = useState(query);
   const [filters, setFilters] = useState<Array<ISavedFilter>>(state.filters || []);
   const [resources, setResources] = useState<Record<'__types' | string, Array<SelectableValue<string>>>>({});
@@ -77,47 +61,21 @@ export const VariableQueryEditor: React.FC<
     })();
   }, [props.datasource]);
 
-  // useEffect(() => {
-  //   (async () => {
-  //     try {
-  //       //load resources
-  //       const resourcesOptions = (await props.datasource.getResourceList()).map(
-  //         ({ value, label }) =>
-  //           ({
-  //             label,
-  //             value,
-  //           } as SelectableValue<string>)
-  //       );
-  //       setState({
-  //         ...state,
-  //         resourcesOptions,
-  //       });
-  //     } catch (e) {
-  //       setState(() => {
-  //         throw new Error('unknown error');
-  //       });
-  //     }
-  //   })();
-  // }, [props.datasource, filters]);
-
-  // useEffect(() => {
-  //   onChange({
-  //     filters,
-  //     resource: state.resource,
-  //   });
-  // }, [onChange, props.datasource, filters, state]);
-
-  console.log(resources);
+  useEffect(() => {
+    onChange({
+      ...state,
+      filters: filters.filter(({ filter, type }) => !!filter.value && !!type.value),
+      resource: state.resource,
+    });
+  }, [onChange, props.datasource, filters, state]);
 
   let errors: Array<string> = [];
 
   //search filters in double
   const usedFilters: Array<string> = [];
-  console.log('check filters', filters);
   const doubleFilters = filters
     .filter((filter) => {
       const value = filter.type.value;
-      console.log('check value', value);
       if (value && usedFilters.includes(value)) {
         errors.push('Filter types need to be uniq');
         return true;
@@ -134,7 +92,6 @@ export const VariableQueryEditor: React.FC<
     ...filter,
     valid: filter.filter.valid && !doubleFilters.includes(filter.type.value),
   }));
-  console.log('errors', errors);
   //remove duplicate errors
   errors = [...new Set(errors)];
 
@@ -147,9 +104,12 @@ export const VariableQueryEditor: React.FC<
             console.log('create option', value);
           }}
           options={resources.__types}
-          value={resources.__types?.find((resource) => resource.value === state.resource)}
+          value={resources.__types?.find((resource) => resource.value === state.resource?.value) || state.resource}
           onChange={(value) => {
-            console.log(value);
+            setState({
+              ...state,
+              resource: value,
+            });
           }}
           loadingMessage="loading"
           isLoading={resources.__types?.length <= 0}
@@ -186,6 +146,7 @@ export const VariableQueryEditor: React.FC<
             </InlineField>
             <InlineField label="filter">
               <AsyncSelect<string>
+                defaultOptions={!!type.value}
                 allowCustomValue={true}
                 defaultValue={[
                   resourcesLoaded[type.value || '']?.find((resource) => resource.value === filter.value) || {
@@ -195,10 +156,8 @@ export const VariableQueryEditor: React.FC<
                 ]}
                 loadOptions={async (filterQuery): Promise<Array<SelectableValue<string>>> => {
                   if (type.value) {
-                    console.log('do request for new query');
                     return getResources(type.value, filterQuery);
                   } else {
-                    console.log('no type, skip query');
                     return [];
                   }
                 }}
@@ -212,7 +171,6 @@ export const VariableQueryEditor: React.FC<
                     },
                     type,
                   };
-                  debugger;
                   setFilters(newFilters);
                 }}
                 loadingMessage="loading"

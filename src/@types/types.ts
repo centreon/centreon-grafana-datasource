@@ -1,11 +1,12 @@
-import { DataQuery, DataSourceJsonData } from '@grafana/data';
+import { DataQuery, DataSourceJsonData, SelectableValue } from '@grafana/data';
+import { ISavedFilter } from '../ISavedFilter';
 
 export interface MyQuery extends DataQuery {
   queryText?: string;
-  constant: number;
-  frequency: number;
+  constant?: number;
+  frequency?: number;
 
-  resource?: string;
+  resource?: SelectableValue<string>;
 }
 
 export const defaultQuery: Partial<MyQuery> = {
@@ -40,10 +41,9 @@ export enum ERoutes {
 }
 
 export interface MyVariableQuery {
-  namespace: string;
-  rawQuery: string;
+  resource?: SelectableValue<string>;
+  filters?: Array<ISavedFilter>;
 }
-
 
 export interface CentreonLoginResult {
   contact: {

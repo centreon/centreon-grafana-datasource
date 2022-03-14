@@ -51,8 +51,7 @@ router.post('/login', (req, res) => {
         is_admin: false,
       },
       security: {
-        // token: Date.now() + 30 * 60 * 1000,
-        token: Date.now() + 10 * 1000,
+        token: Date.now() + 30 * 60 * 1000,
       },
     });
   } else {

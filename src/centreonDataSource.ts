@@ -54,7 +54,10 @@ export class CentreonDataSource extends DataSourceApi<MyQuery, CentreonMetricOpt
   }
 
   async metricFindQuery(query: MyVariableQuery, options?: any): Promise<Array<MetricFindValue>> {
-    console.log(query, options);
+    const { resource, filters } = query;
+
+    const filtersPart = (filters || []).map((value) => `${value.type.value}=${value.filter.value}`).join(',');
+    console.log(`need to query resource "${resource?.value}" with filters : ${filtersPart}`);
     // Retrieve DataQueryResponse based on query.
     // const response = await this.fetchMetricNames(query.namespace, query.rawQuery);
     //
@@ -103,7 +106,7 @@ export class CentreonDataSource extends DataSourceApi<MyQuery, CentreonMetricOpt
         const step = duration / 1000;
 
         for (let t = 0; t < duration; t += step) {
-          frame.add({ time: from + t, value: Math.sin((2 * Math.PI * query.frequency * t) / duration) });
+          frame.add({ time: from + t, value: Math.sin((2 * Math.PI * (query.frequency || 1) * t) / duration) });
         }
       })
     );
@@ -175,11 +178,9 @@ export class CentreonDataSource extends DataSourceApi<MyQuery, CentreonMetricOpt
       },
     });
 
-    console.log(opts.retry);
-
     //if crash, retry
     const res = reqObs.pipe(
-      catchError(async (err, caught) => {
+      catchError(async (err) => {
         if (opts.retry) {
           if ((err as FetchError<{ message: string }>).data?.message) {
             const fetchError: FetchError<{
