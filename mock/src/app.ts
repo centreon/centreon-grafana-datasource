@@ -63,18 +63,62 @@ const dataSourceRouter = Router();
 
 router.use('/data-source', dataSourceRouter);
 
+interface IResource {
+  display_name: string;
+  slug: string;
+  endpoint: string;
+}
+
+const resourcesTypes: Array<IResource> = [
+  {
+    endpoint: '/api/latest/data-source/host',
+    slug: 'host',
+    display_name: 'Host',
+  },
+  {
+    endpoint: '/api/latest/data-source/service',
+    slug: 'service',
+    display_name: 'Service',
+  },
+  {
+    endpoint: '/api/latest/data-source/host-group',
+    slug: 'host-group',
+    display_name: 'host group',
+  },
+  {
+    endpoint: '/api/latest/data-source/service-group',
+    slug: 'service-group',
+    display_name: 'Service group',
+  },
+  {
+    endpoint: '/api/latest/data-source/metaservice',
+    slug: 'metaservice',
+    display_name: 'Meta Service',
+  },
+  {
+    endpoint: '/api/latest/data-source/metric',
+    slug: 'metric',
+    display_name: 'Metric',
+  },
+  {
+    endpoint: '/api/latest/data-source/virtual-metric',
+    slug: 'virtual-metric',
+    display_name: 'Virtual Metric',
+  },
+  {
+    endpoint: '/api/latest/data-source/business-activity',
+    slug: 'business-activity',
+    display_name: 'Business Activity',
+  },
+  {
+    endpoint: '/api/latest/data-source/anomaly-detection',
+    slug: 'anomaly-detection',
+    display_name: 'Anomaly Detection Service',
+  },
+];
 dataSourceRouter.get('/types', ensureAuthenticated, (req, res) => {
   res.send({
-    result: [
-      'host',
-      'service',
-      'host_group',
-      'service_group',
-      'metaservice',
-      'virtual_metric',
-      'businessactivity',
-      'anomalydetection',
-    ],
+    result: resourcesTypes,
     meta: {
       page: 1,
       limit: 10,
@@ -85,191 +129,90 @@ dataSourceRouter.get('/types', ensureAuthenticated, (req, res) => {
   });
 });
 
-dataSourceRouter.get('/host', ensureAuthenticated, (req: express.Request, res) => {
-  const { search } = req.query;
-
-  const result = [...new Array(getRandomArbitrary(1, 15))].map(() => {
-    const id = getRandomArbitrary(1, 1500);
-    return {
-      id,
-      name: `${search?.toString()}-Centreon-Central-${id}`,
-    };
-  });
-
-  res.send({
-    result: result,
-    meta: {
-      page: 1,
-      limit: 10,
-      search: {},
-      sort_by: {},
-      total: result.length,
+const typeRet: Record<string, Array<{ name: string; [key: string]: string }>> = {
+  host: [
+    {
+      name: 'Centreon-central',
     },
-  });
-});
-
-dataSourceRouter.get('/service', ensureAuthenticated, (req: express.Request, res) => {
-  const { search } = req.query;
-
-  const result = [...new Array(getRandomArbitrary(1, 15))].map(() => {
-    const host_id = getRandomArbitrary(1, 1500);
-    const id = getRandomArbitrary(1, 1500);
-    return {
-      host_id,
-      host_name: `${search?.toString()}-Centreon-Central-${host_id}`,
-      id,
-      name: `Ping-${id}`,
-    };
-  });
-
-  res.send({
-    result,
-    meta: {
-      page: 1,
-      limit: 10,
-      search: {},
-      sort_by: {},
-      total: result.length,
+  ],
+  service: [
+    {
+      name: 'Ping',
     },
-  });
-});
-
-dataSourceRouter.get('/host_group', ensureAuthenticated, (req: express.Request, res) => {
-  const { search } = req.query;
-
-  const result = [...new Array(getRandomArbitrary(1, 15))].map(() => {
-    const id = getRandomArbitrary(1, 1500);
-    return {
-      id,
-      name: `${search?.toString()}-HG-${id}`,
-    };
-  });
-
-  res.send({
-    result: result,
-    meta: {
-      page: 1,
-      limit: 10,
-      search: {},
-      sort_by: {},
-      total: result.length,
+    {
+      name: 'Cpu',
     },
-  });
-});
-
-dataSourceRouter.get('/service_group', ensureAuthenticated, (req: express.Request, res) => {
-  const { search } = req.query;
-
-  const result = [...new Array(getRandomArbitrary(1, 15))].map(() => {
-    const id = getRandomArbitrary(1, 1500);
-    return {
-      id,
-      name: `${search?.toString()}-SG-${id}`,
-    };
-  });
-
-  res.send({
-    result: result,
-    meta: {
-      page: 1,
-      limit: 10,
-      search: {},
-      sort_by: {},
-      total: result.length,
+    {
+      name: 'Memory',
     },
-  });
-});
-
-dataSourceRouter.get('/metaservice', ensureAuthenticated, (req: express.Request, res) => {
-  const { search } = req.query;
-
-  const result = [...new Array(getRandomArbitrary(1, 15))].map(() => {
-    const id = getRandomArbitrary(1, 1500);
-    return {
-      id,
-      name: `${search?.toString()}-META-${id}`,
-    };
-  });
-
-  res.send({
-    result: result,
-    meta: {
-      page: 1,
-      limit: 10,
-      search: {},
-      sort_by: {},
-      total: result.length,
+  ],
+  ['host-group']: [
+    {
+      name: 'HG',
     },
-  });
-});
-
-dataSourceRouter.get('/virtual_metric', ensureAuthenticated, (req: express.Request, res) => {
-  const { search } = req.query;
-
-  const result = [...new Array(getRandomArbitrary(1, 15))].map(() => {
-    const id = getRandomArbitrary(1, 1500);
-    return {
-      id,
-      name: `${search?.toString()}-virtual-${id}`,
-    };
-  });
-
-  res.send({
-    result: result,
-    meta: {
-      page: 1,
-      limit: 10,
-      search: {},
-      sort_by: {},
-      total: result.length,
+  ],
+  ['service-group']: [
+    {
+      name: 'SG',
     },
-  });
-});
-
-dataSourceRouter.get('/businessactivity', ensureAuthenticated, (req: express.Request, res) => {
-  const { search } = req.query;
-
-  const result = [...new Array(getRandomArbitrary(1, 15))].map(() => {
-    const id = getRandomArbitrary(1, 1500);
-    return {
-      id,
-      name: `${search?.toString()}-business-activity-${id}`,
-    };
-  });
-
-  res.send({
-    result: result,
-    meta: {
-      page: 1,
-      limit: 10,
-      search: {},
-      sort_by: {},
-      total: result.length,
+  ],
+  ['virtual-metric']: [
+    {
+      name: 'VM',
     },
-  });
-});
-
-dataSourceRouter.get('/anomalydetection', ensureAuthenticated, (req: express.Request, res) => {
-  const { search } = req.query;
-
-  const result = [...new Array(getRandomArbitrary(1, 15))].map(() => {
-    const id = getRandomArbitrary(1, 1500);
-    return {
-      id,
-      name: `${search?.toString()}-Anomaly1-${id}`,
-    };
-  });
-
-  res.send({
-    result: result,
-    meta: {
-      page: 1,
-      limit: 10,
-      search: {},
-      sort_by: {},
-      total: result.length,
+  ],
+  ['business-activity']: [
+    {
+      name: 'BA',
     },
+  ],
+  ['anomaly-detection']: [
+    {
+      name: 'AD',
+    },
+  ],
+  metaservice: [
+    {
+      name: 'metaservice',
+    },
+  ],
+  metric: [
+    {
+      name: 'metric',
+    },
+  ],
+};
+
+const createEndpoint = ({ endpoint, slug }: IResource) => {
+  dataSourceRouter.get(`/${endpoint.split('/').pop()}`, ensureAuthenticated, (req: express.Request, res) => {
+    const name = req.query[slug]?.toString()?.replace('*', '') || '';
+
+    const retTypes = typeRet[slug] || [];
+    const result = [...new Array(getRandomArbitrary(1, 15))].map(() => {
+      const id = getRandomArbitrary(1, 1500);
+      const randRet = retTypes[Math.floor(Math.random() * retTypes.length)];
+      return {
+        ...randRet,
+        id,
+        name: `${name ? name + '-' : ''}${randRet.name}-${id}`,
+      };
+    });
+
+    res.send({
+      result: result,
+      meta: {
+        page: 1,
+        limit: 10,
+        search: {},
+        sort_by: {},
+        total: result.length,
+      },
+    });
   });
+};
+
+resourcesTypes.forEach((type) => {
+  createEndpoint(type);
 });
 
 app.get('/', (req, res) => {

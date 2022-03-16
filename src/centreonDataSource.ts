@@ -66,18 +66,20 @@ export class CentreonDataSource extends DataSourceApi<MyQuery, CentreonMetricOpt
     //
     // return values;
 
-    return [
-      {
-        text: 'tata',
-        value: 0,
-        expandable: false,
-      },
-      {
-        text: 'tutu',
-        value: 1,
-        expandable: false,
-      },
-    ];
+    if (!resource?.value) {
+      return [];
+    }
+
+    return (
+      await this.getResources(
+        resource.value,
+        Object.fromEntries(
+          filters
+            ?.filter(({ filter, type }) => !!filter.value && !!type.value)
+            .map(({ filter, type }) => [type.value!, filter.value!]) || []
+        )
+      )
+    ).map(({ label, value }) => ({ text: label, value, expandable: false }));
   }
 
   async query(options: DataQueryRequest<MyQuery>): Promise<DataQueryResponse> {
@@ -87,7 +89,7 @@ export class CentreonDataSource extends DataSourceApi<MyQuery, CentreonMetricOpt
 
     const data = await Promise.all(
       options.targets.map((target) => {
-        console.log(getTemplateSrv().replace(target.queryText, options.scopedVars));
+        console.log(getTemplateSrv().replace(target.selector, options.scopedVars));
 
         // Your code goes here.
         const query = defaults(target, defaultQuery);
@@ -106,7 +108,7 @@ export class CentreonDataSource extends DataSourceApi<MyQuery, CentreonMetricOpt
         const step = duration / 1000;
 
         for (let t = 0; t < duration; t += step) {
-          frame.add({ time: from + t, value: Math.sin((2 * Math.PI * (query.frequency || 1) * t) / duration) });
+          frame.add({ time: from + t, value: Math.sin((2 * Math.PI * t) / duration) });
         }
       })
     );
@@ -223,20 +225,31 @@ export class CentreonDataSource extends DataSourceApi<MyQuery, CentreonMetricOpt
 
   async getResourceList(): Promise<Array<{ value: string; label: string }>> {
     return (
-      await this.call<CentreonList<string>>({
+      await this.call<
+        CentreonList<{
+          slug: string;
+          display_name: string;
+        }>
+      >({
         url: '/data-source/types',
       })
-    ).data.result.map((data) => ({ label: data, value: data }));
+    ).data.result.map(({ slug, display_name }) => ({ label: display_name, value: slug }));
   }
 
-  async getResources(resourceType: string, search?: string) {
+  async getResources(
+    resourceType: string,
+    params?: Record<string, string>
+  ): Promise<Array<{ label: string; value: string }>> {
     return (
       await this.call<CentreonList<{ id: string; name: string }>>({
         url: `/data-source/${resourceType}`,
-        params: {
-          search,
-        },
+        params,
       })
     ).data.result.map(({ id, name }) => ({ label: name, value: id }));
+  }
+
+  buildRawQuery(query: MyQuery) {
+    // query.
+    return '';
   }
 }

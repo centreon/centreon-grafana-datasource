@@ -1,17 +1,16 @@
 import { DataQuery, DataSourceJsonData, SelectableValue } from '@grafana/data';
-import { ISavedFilter } from '../ISavedFilter';
+import { ISavedFilter } from './ISavedFilter';
 
 export interface MyQuery extends DataQuery {
-  queryText?: string;
-  constant?: number;
-  frequency?: number;
-
+  selector?: string;
   resource?: SelectableValue<string>;
+
+  rawSelector?: string;
+  filters?: Array<ISavedFilter>;
 }
 
 export const defaultQuery: Partial<MyQuery> = {
-  constant: 6.5,
-  frequency: 1.0,
+  selector: 'host:berlin metric:load',
 };
 
 /**
@@ -57,3 +56,5 @@ export interface CentreonLoginResult {
     token: string;
   };
 }
+
+export type tFilter = ISavedFilter & { type: SelectableValue<string> & { valid?: boolean } };
