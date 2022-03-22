@@ -1,16 +1,18 @@
 import { DataQuery, DataSourceJsonData, SelectableValue } from '@grafana/data';
 import { ISavedFilter } from './ISavedFilter';
+import { EMode } from '../QueryEditor/EMode';
 
 export interface MyQuery extends DataQuery {
-  selector?: string;
-  resource?: SelectableValue<string>;
+  resourceType?: SelectableValue<string>;
+
+  mode?: EMode;
 
   rawSelector?: string;
   filters?: Array<ISavedFilter>;
 }
 
 export const defaultQuery: Partial<MyQuery> = {
-  selector: 'host:berlin metric:load',
+  rawSelector: 'host:berlin metric:load',
 };
 
 /**
@@ -37,11 +39,6 @@ export interface CentreonMetricOptions extends DataSourceJsonData {
 export enum ERoutes {
   LOGIN = '/centreon-login',
   API = '/centreon',
-}
-
-export interface MyVariableQuery {
-  resource?: SelectableValue<string>;
-  filters?: Array<ISavedFilter>;
 }
 
 export interface CentreonLoginResult {

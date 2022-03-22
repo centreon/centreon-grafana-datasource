@@ -8,20 +8,13 @@ import {
   MutableDataFrame,
 } from '@grafana/data';
 import { FetchError, getBackendSrv, getTemplateSrv } from '@grafana/runtime';
-import { lastValueFrom, catchError } from 'rxjs';
+import { catchError, lastValueFrom } from 'rxjs';
 
-import {
-  CentreonLoginResult,
-  CentreonMetricOptions,
-  defaultQuery,
-  EAccess,
-  ERoutes,
-  MyQuery,
-  MyVariableQuery,
-} from './@types/types';
+import { CentreonLoginResult, CentreonMetricOptions, defaultQuery, EAccess, ERoutes, MyQuery } from './@types/types';
 import { defaults } from 'lodash';
 import { BackendSrvRequest, FetchResponse } from '@grafana/runtime/services/backendSrv';
 import { CentreonList } from './@types/centreonAPI';
+import { ISavedFilter } from './@types/ISavedFilter';
 
 export class CentreonDataSource extends DataSourceApi<MyQuery, CentreonMetricOptions> {
   private readonly centreonURL: string;
@@ -51,69 +44,6 @@ export class CentreonDataSource extends DataSourceApi<MyQuery, CentreonMetricOpt
     this.access = access;
     this.username = username;
     this.password = password;
-  }
-
-  async metricFindQuery(query: MyVariableQuery, options?: any): Promise<Array<MetricFindValue>> {
-    const { resource, filters } = query;
-
-    const filtersPart = (filters || []).map((value) => `${value.type.value}=${value.filter.value}`).join(',');
-    console.log(`need to query resource "${resource?.value}" with filters : ${filtersPart}`);
-    // Retrieve DataQueryResponse based on query.
-    // const response = await this.fetchMetricNames(query.namespace, query.rawQuery);
-    //
-    // // Convert query results to a MetricFindValue[]
-    // const values = response.data.map(frame => ({ text: frame.name }));
-    //
-    // return values;
-
-    if (!resource?.value) {
-      return [];
-    }
-
-    return (
-      await this.getResources(
-        resource.value,
-        Object.fromEntries(
-          filters
-            ?.filter(({ filter, type }) => !!filter.value && !!type.value)
-            .map(({ filter, type }) => [type.value!, filter.value!]) || []
-        )
-      )
-    ).map(({ label, value }) => ({ text: label, value, expandable: false }));
-  }
-
-  async query(options: DataQueryRequest<MyQuery>): Promise<DataQueryResponse> {
-    const { range } = options;
-    const from = range!.from.valueOf();
-    const to = range!.to.valueOf();
-
-    const data = await Promise.all(
-      options.targets.map((target) => {
-        console.log(getTemplateSrv().replace(target.selector, options.scopedVars));
-
-        // Your code goes here.
-        const query = defaults(target, defaultQuery);
-        const frame = new MutableDataFrame({
-          refId: query.refId,
-          fields: [
-            { name: 'time', type: FieldType.time },
-            { name: 'value', type: FieldType.number },
-          ],
-        });
-
-        // duration of the time range, in milliseconds.
-        const duration = to - from;
-
-        // step determines how close in time (ms) the points will be to each other.
-        const step = duration / 1000;
-
-        for (let t = 0; t < duration; t += step) {
-          frame.add({ time: from + t, value: Math.sin((2 * Math.PI * t) / duration) });
-        }
-      })
-    );
-
-    return { data };
   }
 
   private getUrl(): string {
@@ -223,6 +153,59 @@ export class CentreonDataSource extends DataSourceApi<MyQuery, CentreonMetricOpt
     };
   }
 
+  async metricFindQuery(query: MyQuery, options?: any): Promise<Array<MetricFindValue>> {
+    const { resourceType, filters } = query;
+
+    if (!resourceType?.value) {
+      return [];
+    }
+
+    const filtersPart = (filters || [])
+      .map((value) => `${value.type.value}=${value.filters.map((f) => f.value).join(',')}`)
+      .join(' ');
+    console.log(`need to query resource "${resourceType?.value}" with filters : ${filtersPart}`);
+
+    return (await this.getResources(resourceType.value, filters)).map(({ label, value }) => ({
+      text: label,
+      value,
+      expandable: false,
+    }));
+  }
+
+  async query(options: DataQueryRequest<MyQuery>): Promise<DataQueryResponse> {
+    const { range } = options;
+    const from = range!.from.valueOf();
+    const to = range!.to.valueOf();
+
+    const data = await Promise.all(
+      options.targets.map((target) => {
+        console.log(getTemplateSrv().replace(target.rawSelector, options.scopedVars));
+
+        // Your code goes here.
+        const query = defaults(target, defaultQuery);
+        const frame = new MutableDataFrame({
+          refId: query.refId,
+          fields: [
+            { name: 'time', type: FieldType.time },
+            { name: 'value', type: FieldType.number },
+          ],
+        });
+
+        // duration of the time range, in milliseconds.
+        const duration = to - from;
+
+        // step determines how close in time (ms) the points will be to each other.
+        const step = duration / 1000;
+
+        for (let t = 0; t < duration; t += step) {
+          frame.add({ time: from + t, value: Math.sin((2 * Math.PI * t) / duration) });
+        }
+      })
+    );
+
+    return { data };
+  }
+
   async getResourceList(): Promise<Array<{ value: string; label: string }>> {
     return (
       await this.call<
@@ -236,10 +219,18 @@ export class CentreonDataSource extends DataSourceApi<MyQuery, CentreonMetricOpt
     ).data.result.map(({ slug, display_name }) => ({ label: display_name, value: slug }));
   }
 
+  // private generateQuery(params?: Record<string, undefined | string | Array<undefined | string>> | Array<ISavedFilter>): Record<string, string> {
+  //
+  // }
+
   async getResources(
     resourceType: string,
-    params?: Record<string, string>
+    params?: Record<string, undefined | string | Array<undefined | string>> | Array<ISavedFilter>
   ): Promise<Array<{ label: string; value: string }>> {
+    // TODO organise the query + exploit variables
+
+    console.log(resourceType, params);
+
     return (
       await this.call<CentreonList<{ id: string; name: string }>>({
         url: `/data-source/${resourceType}`,
@@ -248,8 +239,33 @@ export class CentreonDataSource extends DataSourceApi<MyQuery, CentreonMetricOpt
     ).data.result.map(({ id, name }) => ({ label: name, value: id }));
   }
 
-  buildRawQuery(query: MyQuery) {
-    // query.
-    return '';
+  buildRawQuery(filters?: Array<ISavedFilter>): string {
+    return (filters || [])
+      .filter((value) => value.type && value.filters.length > 0)
+      .map((value) => `${value.type.value}="${value.filters.map((f) => f.value).join(',')}"`)
+      .join(' ');
+  }
+
+  buildFiltersQuery(rawSelector?: string): Array<ISavedFilter> {
+    // TODO parse ( for the moment only imagine filters like (3 hosts) : host="tutu,tata,titi"
+
+    return (rawSelector || '')
+      ?.split(' ')
+      .filter((v) => !!v)
+      .map((group) => group.split('='))
+      .map(([type, filters]) => ({
+        type: {
+          label: type,
+          value: type,
+        },
+        filters: filters.split(',').map((f) => {
+          const value = f.slice(1, -1);
+
+          return {
+            label: value,
+            value,
+          };
+        }),
+      }));
   }
 }

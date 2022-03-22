@@ -7,6 +7,7 @@ interface Props extends DataSourcePluginOptionsEditorProps<CentreonMetricOptions
 
 interface State {}
 
+// TODO convert to hooks
 export class ConfigEditor extends PureComponent<Props, State> {
   onChangeCentreonURL = (event: ChangeEvent<HTMLInputElement>) => {
     const { onOptionsChange, options } = this.props;

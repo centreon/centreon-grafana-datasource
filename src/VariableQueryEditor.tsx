@@ -42,8 +42,8 @@ export const VariableQueryEditor: React.FC<
   useEffect(() => {
     onChange({
       ...state,
-      filters: filters.filter(({ filter, type }) => !!filter.value && !!type.value),
-      resource: state.resource,
+      filters: filters.filter(({ filters, type }) => !!filters?.find((f) => f.value) && !!type.value),
+      resourceType: state.resourceType,
     });
   }, [onChange, props.datasource, filters, state]);
 
@@ -59,11 +59,13 @@ export const VariableQueryEditor: React.FC<
             console.log('create option', value);
           }}
           options={resources.__types}
-          value={resources.__types?.find((resource) => resource.value === state.resource?.value) || state.resource}
+          value={
+            resources.__types?.find((resource) => resource.value === state.resourceType?.value) || state.resourceType
+          }
           onChange={(value) => {
             setState({
               ...state,
-              resource: value,
+              resourceType: value,
             });
           }}
           loadingMessage="loading"

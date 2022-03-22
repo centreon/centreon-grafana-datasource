@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { MyQuery } from '../@types/types';
 import { CentreonDataSource } from '../centreonDataSource';
 import { CentreonFilters } from '../CentreonFilters';
-import { SelectableValue } from '@grafana/data';
+import { SelectableValue, VariableModel } from '@grafana/data';
 import { getTemplateSrv } from '@grafana/runtime';
 
 type Props = {
@@ -37,6 +37,26 @@ export const VisualCentreonEditor = ({ onChange, datasource, query }: Props) => 
       }
     })();
   }, [datasource]);
+
+  const customFilters: Record<string, Array<SelectableValue<string>>> = {};
+
+  console.log(getTemplateSrv().getVariables());
+
+  getTemplateSrv()
+    .getVariables()
+    .forEach((v) => {
+      const type = (v as unknown as VariableModel & { query: MyQuery }).query.resourceType?.value || '';
+      if (!type) {
+        //never pass here if variable correctly set
+        return;
+      }
+      if (!customFilters[type]) {
+        customFilters[type] = [];
+      }
+
+      customFilters[type].push({ label: `$${v.name}`, value: `$${v.name}` });
+    });
+
   return (
     <CentreonFilters
       filters={query.filters}
@@ -45,9 +65,7 @@ export const VisualCentreonEditor = ({ onChange, datasource, query }: Props) => 
       }}
       datasource={datasource}
       types={resources.__types}
-      customFilters={getTemplateSrv()
-        .getVariables()
-        .map((v) => ({ label: `$${v.name}`, value: `$${v.name}` }))}
+      customFilters={customFilters}
     />
   );
 };
