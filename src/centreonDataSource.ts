@@ -7,14 +7,17 @@ import {
   MetricFindValue,
   MutableDataFrame,
 } from '@grafana/data';
-import { FetchError, getBackendSrv, getTemplateSrv } from '@grafana/runtime';
+import { FetchError, getBackendSrv } from '@grafana/runtime';
+// import { FetchError, getBackendSrv, getTemplateSrv } from '@grafana/runtime';
 import { catchError, lastValueFrom } from 'rxjs';
 
 import { CentreonLoginResult, CentreonMetricOptions, defaultQuery, EAccess, ERoutes, MyQuery } from './@types/types';
-import { defaults } from 'lodash';
+// import { defaults } from 'lodash';
 import { BackendSrvRequest, FetchResponse } from '@grafana/runtime/services/backendSrv';
-import { CentreonList } from './@types/centreonAPI';
+import { CentreonList, timeSeriesMetric } from './@types/centreonAPI';
 import { ISavedFilter } from './@types/ISavedFilter';
+// import { FieldDTO } from '@grafana/data/types/dataFrame';
+import { defaults } from 'lodash';
 
 export class CentreonDataSource extends DataSourceApi<MyQuery, CentreonMetricOptions> {
   private readonly centreonURL: string;
@@ -173,35 +176,117 @@ export class CentreonDataSource extends DataSourceApi<MyQuery, CentreonMetricOpt
   }
 
   async query(options: DataQueryRequest<MyQuery>): Promise<DataQueryResponse> {
-    const { range } = options;
-    const from = range!.from.valueOf();
-    const to = range!.to.valueOf();
+    // const { range } = options;
+    // const from = range!.from.valueOf();
+    // const to = range!.to.valueOf();
 
-    const data = await Promise.all(
-      options.targets.map((target) => {
-        console.log(getTemplateSrv().replace(target.rawSelector, options.scopedVars));
+    const data: Array<MutableDataFrame> = [];
+
+    await Promise.all(
+      options.targets.map(async (target) => {
+        // console.log(getTemplateSrv().replace(, options.scopedVars));
 
         // Your code goes here.
         const query = defaults(target, defaultQuery);
-        const frame = new MutableDataFrame({
-          refId: query.refId,
-          fields: [
-            { name: 'time', type: FieldType.time },
-            { name: 'value', type: FieldType.number },
-          ],
-        });
 
-        // duration of the time range, in milliseconds.
-        const duration = to - from;
+        // : Array<FieldDTO>
+        // : Array<{ field: FieldDTO<number | Date>; values: Array<number | Date> }>
+        try {
+          // const timeSeries =
+          (
+            await this.call<CentreonList<timeSeriesMetric>>({
+              url: '/data-source/metrics/timeseries',
+            })
+          ).data.result.forEach((metric) => {
+            data.push(
+              new MutableDataFrame({
+                refId: query.refId,
+                fields: [
+                  {
+                    type: FieldType.time,
+                    name: `${metric.name}.time`,
+                    values: metric.timeserie.map((element) => new Date(element.datetime)),
+                  },
+                  {
+                    name: metric.name,
+                    type: FieldType.number,
+                    values: metric.timeserie.map((element) => element.value),
+                  },
+                ],
+              })
+            );
+          });
+          //   [
+          //   {
+          // //     // field: {
+          //     name: metric.name,
+          //     type: FieldType.number,
+          //     // },
+          //     values: metric.timeserie.map((element) => element.value),
+          //   },
+          //   {
+          //     // field: {
+          //     name: `${metric.name}.time`,
+          //     type: FieldType.time,
+          //     // },
+          //     config: {
+          //
+          //     },
+          //     values: metric.timeserie.map((element) => new Date(element.datetime)),
+          //   },
+          // ])
+          // .flat();
+          // console.log(timeSeries);
+          //
+          // return new MutableDataFrame({
+          //   refId: query.refId,
+          //   fields: [
+          //     // {
+          //     //   name: ' Time',
+          //     //   values: [from, to],
+          //     //   type: FieldType.time,
+          //     // },
+          //     // ...timeSeries.map((f) => f.field),
+          //     ...timeSeries,
+          //   ],
+          // });
 
-        // step determines how close in time (ms) the points will be to each other.
-        const step = duration / 1000;
-
-        for (let t = 0; t < duration; t += step) {
-          frame.add({ time: from + t, value: Math.sin((2 * Math.PI * t) / duration) });
+          // timeSeries.forEach(({values}) => {
+          //   frame.add()
+          // })
+        } catch (e) {
+          console.error(e);
+          throw e;
+          // return [];
         }
+
+        // return new MutableDataFrame({
+        //   refId: query.refId,
+        //   fields,
+        // });
+        // const frame = new MutableDataFrame({
+        //   refId: query.refId,
+        //   fields: [
+        //     { name: 'time', type: FieldType.time },
+        //     { name: 'value', type: FieldType.number },
+        //   ],
+        // });
+        //
+        // // duration of the time range, in milliseconds.
+        // const duration = to - from;
+        //
+        // // step determines how close in time (ms) the points will be to each other.
+        // const step = duration / 1000;
+        //
+        // for (let t = 0; t < duration; t += step) {
+        //   frame.add({ time: from + t, value: Math.sin((2 * Math.PI * t) / duration) });
+        // }
+
+        // return frame;
       })
     );
+
+    console.log('data :', data);
 
     return { data };
   }
@@ -238,7 +323,9 @@ export class CentreonDataSource extends DataSourceApi<MyQuery, CentreonMetricOpt
     }
 
     return new URLSearchParams(
-      Array.from(returnFilters).map(([type, filters]: [string, Array<string>]) => [`${type}[]`, filters]) as Array<Array<string>>
+      Array.from(returnFilters).map(([type, filters]: [string, Array<string>]) => [`${type}[]`, filters]) as Array<
+        Array<string>
+      >
     ).toString();
   }
 
@@ -272,6 +359,7 @@ export class CentreonDataSource extends DataSourceApi<MyQuery, CentreonMetricOpt
       .filter((v) => !!v)
       .map((group) => group.split('='))
       .map(([type, filters]) => ({
+        id: Date.now(),
         type: {
           label: type,
           value: type,

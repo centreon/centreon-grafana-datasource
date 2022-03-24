@@ -4,7 +4,7 @@ import { QueryEditorProps, SelectableValue } from '@grafana/data';
 import { CentreonDataSource } from './centreonDataSource';
 import { Alert, ErrorBoundary, InlineField, Select } from '@grafana/ui';
 import { ISavedFilter } from './@types/ISavedFilter';
-import { CentreonFilters } from './CentreonFilters';
+import {CentreonFilters} from "./components/filters/CentreonFilters";
 
 interface VariableQueryEditorState extends MyQuery {}
 

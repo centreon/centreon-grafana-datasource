@@ -215,6 +215,51 @@ resourcesTypes.forEach((type) => {
   createEndpoint(type);
 });
 
+const metricsSample = ['response_time', 'load5', 'load10', 'load15'];
+
+dataSourceRouter.get('/metrics/timeseries', ensureAuthenticated, (req, res) => {
+  const { metrics } = req.params;
+  console.log(metrics);
+
+  const from = new Date(Date.now() - 3 * 60 * 60 * 1000);
+  const to = new Date();
+  // const step = 5 * 1000;
+
+  let returnMetrics: Array<string>;
+  if (metrics) {
+    returnMetrics = Array.isArray(metrics) ? metrics : [metrics];
+  } else {
+    returnMetrics = metricsSample;
+  }
+
+  const result = [...new Array(getRandomArbitrary(1, returnMetrics.length))].map((_, i) => {
+    const name = returnMetrics[i % returnMetrics.length];
+    const id = getRandomArbitrary(1, 1500);
+    const step = getRandomArbitrary(100, 200) * 1000;
+
+    return {
+      id,
+      name,
+      unit: '%',
+      timeserie: [...new Array(Math.floor((to.getTime() - from.getTime()) / step))].map((_, index) => ({
+        value: getRandomArbitrary(1, 800),
+        datetime: from.getTime() + index * step,
+      })),
+    };
+  });
+
+  res.send({
+    result: result,
+    meta: {
+      page: 1,
+      limit: 10,
+      search: {},
+      sort_by: {},
+      total: result.length,
+    },
+  });
+});
+
 app.get('/', (req, res) => {
   console.log('hello world called');
   res.send('Hello World!');

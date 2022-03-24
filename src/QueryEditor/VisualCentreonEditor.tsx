@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { MyQuery } from '../@types/types';
 import { CentreonDataSource } from '../centreonDataSource';
-import { CentreonFilters } from '../CentreonFilters';
 import { SelectableValue, VariableModel } from '@grafana/data';
 import { getTemplateSrv } from '@grafana/runtime';
+import {CentreonFilters} from "../components/filters/CentreonFilters";
 
 type Props = {
   query: MyQuery;
@@ -63,6 +63,7 @@ export const VisualCentreonEditor = ({ onChange, datasource, query }: Props) => 
       onChange={(filters) => {
         onChange({ ...query, filters });
       }}
+      forceBottom={true}
       datasource={datasource}
       types={resources.__types}
       customFilters={customFilters}

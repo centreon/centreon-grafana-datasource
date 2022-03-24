@@ -1,8 +1,8 @@
-import { CentreonDataSource } from './centreonDataSource';
 import { Alert, AsyncSelect, Button, HorizontalGroup, InlineField, Select } from '@grafana/ui';
 import { SelectableValue } from '@grafana/data';
 import React, { useEffect, useState } from 'react';
-import { ISavedFilter } from './@types/ISavedFilter';
+import { ISavedFilter } from '../../@types/ISavedFilter';
+import { CentreonDataSource } from '../../centreonDataSource';
 
 type Props = {
   filters?: Array<ISavedFilter>;
@@ -10,6 +10,7 @@ type Props = {
   datasource: CentreonDataSource;
   types?: Array<SelectableValue<string>>;
   customFilters?: Record<string, Array<SelectableValue<string>>>;
+  forceBottom?: boolean;
 };
 
 const resourcesLoaded: Record<'__types' | string, Array<SelectableValue<string>>> = {};
@@ -20,6 +21,7 @@ export const CentreonFilters = ({
   filters: defaultFilters = [],
   types = [],
   customFilters = {},
+  forceBottom = false,
 }: Props) => {
   const [filters, setFilters] = useState<Array<ISavedFilter>>(defaultFilters || []);
 
@@ -81,16 +83,18 @@ export const CentreonFilters = ({
       {showFilters.length === 0 ? (
         <Alert title="No filters selected" severity="info" />
       ) : (
-        showFilters.map(({ type, filters: currentFilters }, i) => (
-          //TODO correct key
-          <HorizontalGroup key={i}>
+        showFilters.map(({ type, filters: currentFilters, id }, i) => (
+          <HorizontalGroup key={id}>
             <InlineField label="type" labelWidth={20} invalid={!type.valid}>
               <Select<string>
+                menuPlacement={forceBottom ? 'bottom' : 'auto'}
+                allowCreateWhileLoading={true}
                 options={types}
                 value={types?.find((resource) => resource.value === type.value) || type.value}
                 onChange={(value) => {
                   const newFilters = [...filters];
                   newFilters[i] = {
+                    id,
                     filters: [],
                     type: {
                       ...type,
@@ -107,8 +111,10 @@ export const CentreonFilters = ({
             </InlineField>
             <InlineField label="filter" labelWidth={20}>
               <AsyncSelect<string>
+                menuPlacement={forceBottom ? 'bottom' : 'auto'}
+                cacheOptions={false}
                 isMulti={true}
-                disabled={!!type.value}
+                disabled={!type.value}
                 allowCustomValue={true}
                 defaultValue={
                   resourcesLoaded[type.value || '']?.find(
@@ -155,6 +161,7 @@ export const CentreonFilters = ({
 
                   const newFilters = [...filters];
                   newFilters[i] = {
+                    id,
                     filters: select.map(({ value, label }) => ({
                       value,
                       label,
@@ -174,7 +181,7 @@ export const CentreonFilters = ({
               }}
               icon="times"
               variant="secondary"
-            ></Button>
+            />
           </HorizontalGroup>
         ))
       )}
@@ -192,7 +199,7 @@ export const CentreonFilters = ({
         <Button
           type="button"
           onClick={() => {
-            setFilters([...filters, { type: { value: '', valid: false }, filters: [] }]);
+            setFilters([...filters, { type: { value: '', valid: false }, filters: [], id: Date.now() }]);
           }}
         >
           Add Filter
