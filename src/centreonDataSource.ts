@@ -219,9 +219,28 @@ export class CentreonDataSource extends DataSourceApi<MyQuery, CentreonMetricOpt
     ).data.result.map(({ slug, display_name }) => ({ label: display_name, value: slug }));
   }
 
-  // private generateQuery(params?: Record<string, undefined | string | Array<undefined | string>> | Array<ISavedFilter>): Record<string, string> {
-  //
-  // }
+  private generateGetQueryString(
+    params?: Record<string, undefined | string | Array<undefined | string>> | Array<ISavedFilter>
+  ): string {
+    const returnFilters: Map<string, Array<string>> = new Map<string, Array<string>>();
+
+    if (Array.isArray(params)) {
+      params
+        //check we have a type
+        .filter(({ type }) => !!type.value)
+        .forEach(({ type, filters }) => {
+          returnFilters.set(
+            type.value!,
+            //filter empty filters, and save array
+            filters.filter(({ value }) => !!value).map(({ value }) => value!)
+          );
+        });
+    }
+
+    return new URLSearchParams(
+      Array.from(returnFilters).map(([type, filters]: [string, Array<string>]) => [`${type}[]`, filters]) as Array<Array<string>>
+    ).toString();
+  }
 
   async getResources(
     resourceType: string,
@@ -229,12 +248,11 @@ export class CentreonDataSource extends DataSourceApi<MyQuery, CentreonMetricOpt
   ): Promise<Array<{ label: string; value: string }>> {
     // TODO organise the query + exploit variables
 
-    console.log(resourceType, params);
+    console.log(resourceType, params, this.generateGetQueryString(params));
 
     return (
       await this.call<CentreonList<{ id: string; name: string }>>({
-        url: `/data-source/${resourceType}`,
-        params,
+        url: `/data-source/${resourceType}${params ? '?' + this.generateGetQueryString(params) : ''}`,
       })
     ).data.result.map(({ id, name }) => ({ label: name, value: id }));
   }

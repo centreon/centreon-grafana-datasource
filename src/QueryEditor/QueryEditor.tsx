@@ -25,37 +25,39 @@ export const QueryEditor: React.FC<Props> = (props: Props) => {
   console.log(mode, state.filters, state.rawSelector);
 
   return (
-    <div className={css({ display: 'flex' })}>
-      <div className={css({ flexGrow: 1 })}>
+    <div>
+      <div className={css({ marginTop: '10px' })}>
+        <QueryEditorModeSwitcher
+          mode={mode}
+          onChange={(newMode) => {
+            if (newMode === EMode.RAW) {
+              const rawSelector = datasource.buildRawQuery(state.filters);
+              console.log('convert', state.filters, 'to', rawSelector);
+              onChange({
+                ...state,
+                mode: newMode,
+                rawSelector,
+              });
+            } else {
+              const filters = datasource.buildFiltersQuery(state.rawSelector);
+              console.log(`mode ${newMode} => convert`, state.rawSelector, 'to', filters);
+
+              onChange({
+                ...state,
+                mode: newMode,
+                filters,
+              });
+            }
+          }}
+        />
+      </div>
+      <div className={css({ flexGrow: 1, marginTop: '10px' })}>
         {mode === EMode.RAW ? (
           <RawCentreonQueryEditor query={query} onChange={onChange} onRunQuery={onRunQuery} />
         ) : (
           <VisualCentreonEditor query={query} onChange={onChange} onRunQuery={onRunQuery} datasource={datasource} />
         )}
       </div>
-      <QueryEditorModeSwitcher
-        mode={mode}
-        onChange={(newMode) => {
-          if (newMode === EMode.RAW) {
-            const rawSelector = datasource.buildRawQuery(state.filters);
-            console.log('convert', state.filters, 'to', rawSelector);
-            onChange({
-              ...state,
-              mode: newMode,
-              rawSelector,
-            });
-          } else {
-            const filters = datasource.buildFiltersQuery(state.rawSelector);
-            console.log(`mode ${newMode} => convert`, state.rawSelector, 'to', filters);
-
-            onChange({
-              ...state,
-              mode: newMode,
-              filters,
-            });
-          }
-        }}
-      />
     </div>
   );
 };

@@ -82,6 +82,7 @@ export const CentreonFilters = ({
         <Alert title="No filters selected" severity="info" />
       ) : (
         showFilters.map(({ type, filters: currentFilters }, i) => (
+          //TODO correct key
           <HorizontalGroup key={i}>
             <InlineField label="type" labelWidth={20} invalid={!type.valid}>
               <Select<string>
