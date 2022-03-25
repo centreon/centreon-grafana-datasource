@@ -22,7 +22,7 @@ export const QueryEditor: React.FC<Props> = (props: Props) => {
 
   const mode = state.mode ?? EMode.VISUAL;
 
-  console.log(mode, state.filters, state.rawSelector);
+  // console.log(mode, state.filters, state.rawSelector);
 
   return (
     <div>

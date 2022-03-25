@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { AsyncSelect, Button, HorizontalGroup, InlineField, Select } from '@grafana/ui';
 import { SelectableValue } from '@grafana/data';
 
@@ -12,6 +12,8 @@ interface Props {
   getResources: (type: string, query: Array<string>) => SelectableValue<string>;
   onDelete?: () => void;
   onChange?: (type: SelectableValue<string>, filters: Array<SelectableValue<string>>) => void;
+  defaultType: SelectableValue<string>;
+  defaultFilters: Array<SelectableValue<string>>;
 }
 
 export const Filter = ({
@@ -22,12 +24,26 @@ export const Filter = ({
   getResources,
   onDelete,
   onChange,
+  defaultFilters,
+  defaultType,
 }: Props) => {
-  const [type, setType] = useState<SelectableValue<string>>({});
-  const [filters, setFilters] = useState<Array<SelectableValue<string>>>([]);
+  const [type, setType] = useState<SelectableValue<string>>(defaultType);
+  const [filters, setFilters] = useState<Array<SelectableValue<string>>>(defaultFilters);
+  const val = useRef<{ filters: Array<string>; type: string }>({ filters: [], type: '' });
+  console.log('render filter', 'types', types, 'defaultFilters', defaultFilters, 'defaultType', defaultType);
 
   useEffect(() => {
-    onChange?.(type, filters);
+    if (
+      JSON.stringify(val.current.filters) != JSON.stringify(filters.map((f) => f.value)) ||
+      val.current.type != type.value
+    ) {
+      console.log('call onChange');
+      onChange?.(type, filters);
+      val.current = {
+        type: type.value || '',
+        filters: filters.map((f) => f.value || ''),
+      };
+    }
   }, [type, filters, onChange]);
 
   return (
@@ -52,6 +68,7 @@ export const Filter = ({
             cacheOptions={false}
             isMulti={true}
             disabled={!type.value}
+            defaultOptions={true}
             allowCustomValue={true}
             defaultValue={filters.map((f) => getResource(type.value!, f.value!))}
             loadOptions={async (name): Promise<Array<SelectableValue<string>>> => {

@@ -286,7 +286,7 @@ export class CentreonDataSource extends DataSourceApi<MyQuery, CentreonMetricOpt
       })
     );
 
-    console.log('data :', data);
+    // console.log('data :', data);
 
     return { data };
   }
@@ -335,7 +335,7 @@ export class CentreonDataSource extends DataSourceApi<MyQuery, CentreonMetricOpt
   ): Promise<Array<{ label: string; value: string }>> {
     // TODO organise the query + exploit variables
 
-    console.log(resourceType, params, this.generateGetQueryString(params));
+    // console.log(resourceType, params, this.generateGetQueryString(params));
 
     return (
       await this.call<CentreonList<{ id: string; name: string }>>({

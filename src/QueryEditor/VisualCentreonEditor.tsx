@@ -40,7 +40,7 @@ export const VisualCentreonEditor = ({ onChange, datasource, query }: Props) => 
 
   const customFilters: Record<string, Array<SelectableValue<string>>> = {};
 
-  console.log(getTemplateSrv().getVariables());
+  // console.log(getTemplateSrv().getVariables());
 
   getTemplateSrv()
     .getVariables()

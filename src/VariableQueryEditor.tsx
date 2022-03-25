@@ -58,7 +58,7 @@ export const VariableQueryEditor: React.FC<
           onCreateOption={(value) => {
             console.log('create option', value);
           }}
-          options={resources.__types}
+          // options={resources.__types}
           value={
             resources.__types?.find((resource) => resource.value === state.resourceType?.value) || state.resourceType
           }
