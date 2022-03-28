@@ -4,7 +4,7 @@ import { QueryEditorProps, SelectableValue } from '@grafana/data';
 import { CentreonDataSource } from './centreonDataSource';
 import { Alert, ErrorBoundary, InlineField, Select } from '@grafana/ui';
 import { ISavedFilter } from './@types/ISavedFilter';
-import {CentreonFilters} from "./components/filters/CentreonFilters";
+import { CentreonFilters } from './components/filters/CentreonFilters';
 
 interface VariableQueryEditorState extends MyQuery {}
 
@@ -42,7 +42,7 @@ export const VariableQueryEditor: React.FC<
   useEffect(() => {
     onChange({
       ...state,
-      filters: filters.filter(({ filters, type }) => !!filters?.find((f) => f.value) && !!type.value),
+      filters: filters.filter(({ filters: cFilters, type }) => !!cFilters?.find((f) => f.value) && !!type.value),
       resourceType: state.resourceType,
     });
   }, [onChange, props.datasource, filters, state]);
@@ -58,7 +58,7 @@ export const VariableQueryEditor: React.FC<
           onCreateOption={(value) => {
             console.log('create option', value);
           }}
-          // options={resources.__types}
+          options={resources.__types}
           value={
             resources.__types?.find((resource) => resource.value === state.resourceType?.value) || state.resourceType
           }

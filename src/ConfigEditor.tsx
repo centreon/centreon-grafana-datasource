@@ -1,82 +1,73 @@
-import React, { ChangeEvent, PureComponent } from 'react';
+import React, { ChangeEvent } from 'react';
 import { InlineField, Input, Select } from '@grafana/ui';
 import { DataSourcePluginOptionsEditorProps, SelectableValue } from '@grafana/data';
 import { CentreonMetricOptions, CentreonMetricSecureDatas, EAccess } from './@types/types';
 
 interface Props extends DataSourcePluginOptionsEditorProps<CentreonMetricOptions, CentreonMetricSecureDatas> {}
 
-interface State {}
-
-// TODO convert to hooks
-export class ConfigEditor extends PureComponent<Props, State> {
-  onChangeCentreonURL = (event: ChangeEvent<HTMLInputElement>) => {
-    const { onOptionsChange, options } = this.props;
-
+export const ConfigEditor = (props: Props) => {
+  const { onOptionsChange, options } = props;
+  const onChangeCentreonURL = (event: ChangeEvent<HTMLInputElement>) => {
     let centreonURL = event.target.value;
 
-    const jsonData = {
+    const newJSONData = {
       ...options.jsonData,
       centreonURL,
     };
     onOptionsChange({
       ...options,
-      jsonData: jsonData,
+      jsonData: newJSONData,
     });
   };
 
-  onChangeUsername = (event: ChangeEvent<HTMLInputElement>) => {
-    const { onOptionsChange, options } = this.props;
-
-    const jsonData = {
+  const onChangeUsername = (event: ChangeEvent<HTMLInputElement>) => {
+    const newJSONData = {
       ...options.jsonData,
       username: event.target.value,
     };
     onOptionsChange({
       ...options,
-      jsonData: jsonData,
+      jsonData: newJSONData,
     });
   };
 
   // Secure field (only sent to the backend)
-  onChangePassword = (event: ChangeEvent<HTMLInputElement>) => {
-    const { onOptionsChange, options } = this.props;
-
+  const onChangePassword = (event: ChangeEvent<HTMLInputElement>) => {
     const { value } = event.target;
 
-    let secureJsonData = options.secureJsonData || {};
-    let secureJsonFields = options.secureJsonFields;
-    let jsonData = options.jsonData;
+    let newSecureJsonData = options.secureJsonData || {};
+    let newSecureJsonFields = options.secureJsonFields;
+    let newJSONData = options.jsonData;
     if (options.jsonData.access === EAccess.PROXY) {
-      secureJsonData.password = value;
-      jsonData.password = '';
+      newSecureJsonData.password = value;
+      newJSONData.password = '';
     } else {
-      jsonData.password = value;
-      secureJsonFields.password = false;
-      secureJsonData.password = '';
+      newJSONData.password = value;
+      newSecureJsonFields.password = false;
+      newSecureJsonData.password = '';
     }
 
     onOptionsChange({
       ...options,
-      jsonData,
-      secureJsonData,
+      secureJsonFields: newSecureJsonFields,
+      jsonData: newJSONData,
+      secureJsonData: newSecureJsonData,
     });
   };
 
-  onChangeAccessMode = (selected: SelectableValue<EAccess>) => {
-    const { onOptionsChange, options } = this.props;
-
+  const onChangeAccessMode = (selected: SelectableValue<EAccess>) => {
     if (!selected?.value) {
       return;
     }
 
-    const jsonData = {
+    const newJSONData = {
       ...options.jsonData,
       access: selected.value,
       password: '',
     };
     onOptionsChange({
       ...options,
-      jsonData: jsonData,
+      jsonData: newJSONData,
       secureJsonFields: {
         password: false,
       },
@@ -86,64 +77,61 @@ export class ConfigEditor extends PureComponent<Props, State> {
     });
   };
 
-  render() {
-    const { options } = this.props;
-    const { jsonData, secureJsonFields } = options;
-    const secureJsonData = options.secureJsonData || {};
+  const { jsonData, secureJsonFields } = options;
+  const secureJsonData = options.secureJsonData || {};
 
-    const accessOptions = [
-      { label: 'Proxy', value: EAccess.PROXY, description: 'The request will be done by the grafana server' },
-      { label: 'Browser', value: EAccess.BROWSER, description: 'The request will be done by your browser' },
-    ];
+  const accessOptions = [
+    { label: 'Proxy', value: EAccess.PROXY, description: 'The request will be done by the grafana server' },
+    { label: 'Browser', value: EAccess.BROWSER, description: 'The request will be done by your browser' },
+  ];
 
-    const password = jsonData.access === EAccess.PROXY ? secureJsonData.password : jsonData.password;
-    const hasPassword =
-      (jsonData.access === EAccess.PROXY && secureJsonFields.password) ||
-      (jsonData.access === EAccess.BROWSER && jsonData.password);
+  const password = jsonData.access === EAccess.PROXY ? secureJsonData.password : jsonData.password;
+  const hasPassword =
+    (jsonData.access === EAccess.PROXY && secureJsonFields.password) ||
+    (jsonData.access === EAccess.BROWSER && jsonData.password);
 
-    return (
-      <>
-        <div className="gf-form-group">
-          <InlineField
-            label="Your Centreon URL"
-            tooltip="The base URL of your Centreon instance. For example http://127.0.0.1/centreon"
-            labelWidth={20}
-            grow={false}
-          >
-            <Input width={40} value={jsonData.centreonURL} onChange={this.onChangeCentreonURL} />
-          </InlineField>
-          <InlineField
-            label="Access Mode"
-            tooltip="The way Grafana call your Centreon instance. Changing it will reset username/password"
-            labelWidth={20}
-            grow={false}
-          >
-            <Select<EAccess>
-              options={accessOptions}
-              value={accessOptions.find((option) => option.value === (jsonData.access || EAccess.PROXY))}
-              onChange={this.onChangeAccessMode}
-              width={40}
-            />
-          </InlineField>
-          <InlineField
-            label="Username"
-            tooltip="The best way is to create a Centreon user for this datasource"
-            labelWidth={20}
-            grow={false}
-          >
-            <Input width={40} value={jsonData.username} onChange={this.onChangeUsername} />
-          </InlineField>
-          <InlineField label="Password" labelWidth={20} grow={false}>
-            <Input
-              type="password"
-              width={40}
-              placeholder={hasPassword ? 'saved' : 'enter password'}
-              value={password}
-              onChange={this.onChangePassword}
-            />
-          </InlineField>
-        </div>
-      </>
-    );
-  }
-}
+  return (
+    <>
+      <div className="gf-form-group">
+        <InlineField
+          label="Your Centreon URL"
+          tooltip="The base URL of your Centreon instance. For example http://127.0.0.1/centreon"
+          labelWidth={20}
+          grow={false}
+        >
+          <Input width={40} value={jsonData.centreonURL} onChange={onChangeCentreonURL} />
+        </InlineField>
+        <InlineField
+          label="Access Mode"
+          tooltip="The way Grafana call your Centreon instance. Changing it will reset username/password"
+          labelWidth={20}
+          grow={false}
+        >
+          <Select<EAccess>
+            options={accessOptions}
+            value={accessOptions.find((option) => option.value === (jsonData.access || EAccess.PROXY))}
+            onChange={onChangeAccessMode}
+            width={40}
+          />
+        </InlineField>
+        <InlineField
+          label="Username"
+          tooltip="The best way is to create a Centreon user for this datasource"
+          labelWidth={20}
+          grow={false}
+        >
+          <Input width={40} value={jsonData.username} onChange={onChangeUsername} />
+        </InlineField>
+        <InlineField label="Password" labelWidth={20} grow={false}>
+          <Input
+            type="password"
+            width={40}
+            placeholder={hasPassword ? 'saved' : 'enter password'}
+            value={password}
+            onChange={onChangePassword}
+          />
+        </InlineField>
+      </div>
+    </>
+  );
+};

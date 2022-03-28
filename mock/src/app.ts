@@ -218,16 +218,16 @@ resourcesTypes.forEach((type) => {
 const metricsSample = ['response_time', 'load5', 'load10', 'load15'];
 
 dataSourceRouter.get('/metrics/timeseries', ensureAuthenticated, (req, res) => {
-  const { metrics } = req.params;
+  const { metrics } = req.query;
   console.log(metrics);
 
-  const from = new Date(Date.now() - 3 * 60 * 60 * 1000);
-  const to = new Date();
+  const from = new Date(Number(req.query.from) || Date.now() - 3 * 60 * 60 * 1000);
+  const to = new Date(Number(req.query.to) || Date.now());
   // const step = 5 * 1000;
 
   let returnMetrics: Array<string>;
   if (metrics) {
-    returnMetrics = Array.isArray(metrics) ? metrics : [metrics];
+    returnMetrics = Array.isArray(metrics) ? metrics.map((m) => m.toString()) : [metrics.toString()];
   } else {
     returnMetrics = metricsSample;
   }
@@ -235,13 +235,17 @@ dataSourceRouter.get('/metrics/timeseries', ensureAuthenticated, (req, res) => {
   const result = [...new Array(getRandomArbitrary(1, returnMetrics.length))].map((_, i) => {
     const name = returnMetrics[i % returnMetrics.length];
     const id = getRandomArbitrary(1, 1500);
-    const step = getRandomArbitrary(100, 200) * 1000;
+    const timeFrameLength = to.getTime() - from.getTime();
+
+    const nbResults = getRandomArbitrary(10, 100);
+
+    const step = timeFrameLength / nbResults;
 
     return {
       id,
       name,
       unit: '%',
-      timeserie: [...new Array(Math.floor((to.getTime() - from.getTime()) / step))].map((_, index) => ({
+      timeserie: [...new Array(nbResults)].map((_, index) => ({
         value: getRandomArbitrary(1, 800),
         datetime: from.getTime() + index * step,
       })),

@@ -6,17 +6,15 @@ import {
   FieldType,
   MetricFindValue,
   MutableDataFrame,
+  ScopedVars,
 } from '@grafana/data';
-import { FetchError, getBackendSrv } from '@grafana/runtime';
-// import { FetchError, getBackendSrv, getTemplateSrv } from '@grafana/runtime';
+import { FetchError, getBackendSrv, getTemplateSrv } from '@grafana/runtime';
 import { catchError, lastValueFrom } from 'rxjs';
 
 import { CentreonLoginResult, CentreonMetricOptions, defaultQuery, EAccess, ERoutes, MyQuery } from './@types/types';
-// import { defaults } from 'lodash';
 import { BackendSrvRequest, FetchResponse } from '@grafana/runtime/services/backendSrv';
-import { CentreonList, timeSeriesMetric } from './@types/centreonAPI';
+import { CentreonList, ITimeSeriesMetric } from './@types/centreonAPI';
 import { ISavedFilter } from './@types/ISavedFilter';
-// import { FieldDTO } from '@grafana/data/types/dataFrame';
 import { defaults } from 'lodash';
 
 export class CentreonDataSource extends DataSourceApi<MyQuery, CentreonMetricOptions> {
@@ -144,7 +142,7 @@ export class CentreonDataSource extends DataSourceApi<MyQuery, CentreonMetricOpt
     if (!this.centreonURL) {
       throw new Error('field centreonURL is mandatory');
     }
-    if (!this.password) {
+    if (this.access === EAccess.BROWSER && !this.password) {
       throw new Error('field password is mandatory');
     }
 
@@ -176,26 +174,25 @@ export class CentreonDataSource extends DataSourceApi<MyQuery, CentreonMetricOpt
   }
 
   async query(options: DataQueryRequest<MyQuery>): Promise<DataQueryResponse> {
-    // const { range } = options;
-    // const from = range!.from.valueOf();
-    // const to = range!.to.valueOf();
+    const { range } = options;
+    const from = range.from.valueOf();
+    const to = range.to.valueOf();
 
     const data: Array<MutableDataFrame> = [];
 
     await Promise.all(
       options.targets.map(async (target) => {
-        // console.log(getTemplateSrv().replace(, options.scopedVars));
-
-        // Your code goes here.
         const query = defaults(target, defaultQuery);
 
-        // : Array<FieldDTO>
-        // : Array<{ field: FieldDTO<number | Date>; values: Array<number | Date> }>
+        const searchParams = this.generateUrlSearchParamsFilters(query.filters, options.scopedVars);
+
+        searchParams.append('to', to.toString());
+        searchParams.append('from', from.toString());
         try {
-          // const timeSeries =
+          //call centreon timeSeries + build DataFrame (one per metric . One call can return multiple metrics)
           (
-            await this.call<CentreonList<timeSeriesMetric>>({
-              url: '/data-source/metrics/timeseries',
+            await this.call<CentreonList<ITimeSeriesMetric>>({
+              url: `/data-source/metrics/timeseries?${searchParams}`,
             })
           ).data.result.forEach((metric) => {
             data.push(
@@ -216,77 +213,12 @@ export class CentreonDataSource extends DataSourceApi<MyQuery, CentreonMetricOpt
               })
             );
           });
-          //   [
-          //   {
-          // //     // field: {
-          //     name: metric.name,
-          //     type: FieldType.number,
-          //     // },
-          //     values: metric.timeserie.map((element) => element.value),
-          //   },
-          //   {
-          //     // field: {
-          //     name: `${metric.name}.time`,
-          //     type: FieldType.time,
-          //     // },
-          //     config: {
-          //
-          //     },
-          //     values: metric.timeserie.map((element) => new Date(element.datetime)),
-          //   },
-          // ])
-          // .flat();
-          // console.log(timeSeries);
-          //
-          // return new MutableDataFrame({
-          //   refId: query.refId,
-          //   fields: [
-          //     // {
-          //     //   name: ' Time',
-          //     //   values: [from, to],
-          //     //   type: FieldType.time,
-          //     // },
-          //     // ...timeSeries.map((f) => f.field),
-          //     ...timeSeries,
-          //   ],
-          // });
-
-          // timeSeries.forEach(({values}) => {
-          //   frame.add()
-          // })
         } catch (e) {
           console.error(e);
           throw e;
-          // return [];
         }
-
-        // return new MutableDataFrame({
-        //   refId: query.refId,
-        //   fields,
-        // });
-        // const frame = new MutableDataFrame({
-        //   refId: query.refId,
-        //   fields: [
-        //     { name: 'time', type: FieldType.time },
-        //     { name: 'value', type: FieldType.number },
-        //   ],
-        // });
-        //
-        // // duration of the time range, in milliseconds.
-        // const duration = to - from;
-        //
-        // // step determines how close in time (ms) the points will be to each other.
-        // const step = duration / 1000;
-        //
-        // for (let t = 0; t < duration; t += step) {
-        //   frame.add({ time: from + t, value: Math.sin((2 * Math.PI * t) / duration) });
-        // }
-
-        // return frame;
       })
     );
-
-    // console.log('data :', data);
 
     return { data };
   }
@@ -304,44 +236,123 @@ export class CentreonDataSource extends DataSourceApi<MyQuery, CentreonMetricOpt
     ).data.result.map(({ slug, display_name }) => ({ label: display_name, value: slug }));
   }
 
-  private generateGetQueryString(
-    params?: Record<string, undefined | string | Array<undefined | string>> | Array<ISavedFilter>
-  ): string {
-    const returnFilters: Map<string, Array<string>> = new Map<string, Array<string>>();
+  private convertArrayOfSavedFilterToMap(params?: Array<ISavedFilter>): Map<string, Array<string>> {
+    const standardsFilters: Map<string, Array<string>> = new Map<string, Array<string>>();
 
-    if (Array.isArray(params)) {
-      params
-        //check we have a type
-        .filter(({ type }) => !!type.value)
-        .forEach(({ type, filters }) => {
-          returnFilters.set(
-            type.value!,
-            //filter empty filters, and save array
-            filters.filter(({ value }) => !!value).map(({ value }) => value!)
-          );
-        });
+    if (!params) {
+      return standardsFilters;
     }
 
-    return new URLSearchParams(
-      Array.from(returnFilters).map(([type, filters]: [string, Array<string>]) => [`${type}[]`, filters]) as Array<
-        Array<string>
-      >
-    ).toString();
+    params
+      //check we have a type
+      .filter(({ type }) => !!type.value)
+      .forEach(({ type, filters }) => {
+        standardsFilters.set(
+          type.value!,
+          //filter empty filters, and save array
+          filters.filter(({ value }) => !!value).map(({ value }) => value!)
+        );
+      });
+
+    return standardsFilters;
+  }
+
+  private convertRecordOfStringsFilterToMap(
+    params?: Record<string, undefined | string | Array<undefined | string>>
+  ): Map<string, Array<string>> {
+    const standardsFilters: Map<string, Array<string>> = new Map<string, Array<string>>();
+
+    if (!params) {
+      return standardsFilters;
+    }
+
+    (
+      Object.entries(params)
+        //filter params without type, or without filters, or empty filters
+        .filter(
+          ([type, pFilters]) => type && pFilters && Array.isArray(pFilters) && pFilters.filter((f) => !!f)
+        ) as Array<[string, string | Array<string>]>
+    )
+      //then add them in map
+      .forEach(([type, pFilters]) => {
+        const filters = Array.isArray(pFilters) ? pFilters : [pFilters];
+        standardsFilters.set(type, filters);
+      });
+
+    return standardsFilters;
+  }
+
+  private interpolateVariables(
+    inputFilters: Map<string, Array<string>>,
+    scopedVars?: ScopedVars
+  ): Array<[string, Array<string>]> {
+    const templateSrv = getTemplateSrv();
+
+    if (!templateSrv) {
+      return Array.from(inputFilters);
+    }
+
+    // interpolates variables from type and array
+    return Array.from(inputFilters).map(([type, pFilters]) => {
+      const filters = pFilters
+        .map((filter) => {
+          const filterParsed = templateSrv.replace(filter || '', scopedVars, 'json');
+          //if replace doesn't change . It doesn't contain a variable
+          if (filter === filterParsed) {
+            return filter;
+          }
+
+          //else try to json parse it . And check we have strings or equivalent
+          const tmpNewFilters = JSON.parse(filterParsed);
+          const newFilters = Array.isArray(tmpNewFilters) ? tmpNewFilters : [tmpNewFilters];
+
+          newFilters.forEach((value) => {
+            if (value != value.toString() || typeof value.toString() !== 'string') {
+              throw new Error(`filter "${value}" seems to not be a string`);
+            }
+          });
+
+          return newFilters;
+        })
+        .flat();
+      return [type, filters];
+    });
+  }
+
+  private generateUrlSearchParamsFilters(
+    params?: Record<string, undefined | string | Array<undefined | string>> | Array<ISavedFilter>,
+    scopedVars?: ScopedVars
+  ): URLSearchParams {
+    // convert filters to a standards format
+    let standardsFilters: Map<string, Array<string>> = new Map<string, Array<string>>();
+
+    if (Array.isArray(params)) {
+      standardsFilters = this.convertArrayOfSavedFilterToMap(params);
+    } else if (params) {
+      standardsFilters = this.convertRecordOfStringsFilterToMap(params);
+    }
+
+    const finalArray = this.interpolateVariables(standardsFilters, scopedVars);
+
+    const searchParams = new URLSearchParams();
+
+    Array.from(finalArray).forEach(([type, filters]: [string, Array<string>]) => {
+      filters.forEach((filter) => searchParams.append(`${type}[]`, filter));
+    });
+
+    return searchParams;
   }
 
   async getResources(
     resourceType: string,
     params?: Record<string, undefined | string | Array<undefined | string>> | Array<ISavedFilter>
   ): Promise<Array<{ label: string; value: string }>> {
-    // TODO organise the query + exploit variables
-
-    // console.log(resourceType, params, this.generateGetQueryString(params));
-
     return (
       await this.call<CentreonList<{ id: string; name: string }>>({
-        url: `/data-source/${resourceType}${params ? '?' + this.generateGetQueryString(params) : ''}`,
+        url: `/data-source/${resourceType}${params ? '?' + this.generateUrlSearchParamsFilters(params) : ''}`,
       })
-    ).data.result.map(({ id, name }) => ({ label: name, value: id }));
+    ).data.result.map(({ name }) => ({ label: name, value: name }));
+    //use ID or name in the value ?
   }
 
   buildRawQuery(filters?: Array<ISavedFilter>): string {

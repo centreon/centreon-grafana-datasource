@@ -3,7 +3,7 @@ import { MyQuery } from '../@types/types';
 import { CentreonDataSource } from '../centreonDataSource';
 import { SelectableValue, VariableModel } from '@grafana/data';
 import { getTemplateSrv } from '@grafana/runtime';
-import {CentreonFilters} from "../components/filters/CentreonFilters";
+import { CentreonFilters } from '../components/filters/CentreonFilters';
 
 type Props = {
   query: MyQuery;
@@ -39,8 +39,6 @@ export const VisualCentreonEditor = ({ onChange, datasource, query }: Props) => 
   }, [datasource]);
 
   const customFilters: Record<string, Array<SelectableValue<string>>> = {};
-
-  // console.log(getTemplateSrv().getVariables());
 
   getTemplateSrv()
     .getVariables()

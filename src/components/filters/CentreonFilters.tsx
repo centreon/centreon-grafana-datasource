@@ -47,7 +47,7 @@ export const CentreonFilters = ({
       try {
         const query = {
           //prepare query object from all types
-          ...Object.fromEntries((filters || []).map((f) => [f.type.value, f.filters.map((f) => f.value)])),
+          ...Object.fromEntries((filters || []).map((filter) => [filter.type.value, filter.filters.map((f) => f.value)])),
         };
 
         const res = await datasource.getResources(type, {
@@ -70,23 +70,6 @@ export const CentreonFilters = ({
     [filters]
   );
 
-  // const getResources = async (type: string, resourcesFilters?: Record<string, string>) => {
-  //   try {
-  //     const res = await datasource.getResources(type, resourcesFilters);
-  //     resourcesLoaded[type] = (resourcesLoaded[type] || [])
-  //       //add new resources to previous list
-  //       .concat(res)
-  //       //remove duplicate based on .value
-  //       .filter((value, index, self) => index === self.findIndex((t) => t.value === value.value));
-  //     return res;
-  //   } catch (e) {
-  //     setFilters(() => {
-  //       throw e;
-  //     });
-  //   }
-  //   return [];
-  // };
-
   useEffect(() => {
     onChange(filters);
   }, [filters]);
@@ -94,22 +77,22 @@ export const CentreonFilters = ({
   let errors: Array<string> = [];
 
   //search filters in double
-  // const usedFilters: Array<string> = [];
+  const usedFilters: Array<string> = [];
 
   // TODO useless, only used to add errors in the errors array
   // const doubleFilters =
-  // filters.forEach((filter) => {
-  //   const value = filter.type.value;
-  //   if (value && usedFilters.includes(value)) {
-  //     errors.push(`Filter types need to be uniq (${filter.type.label})`);
-  //     return true;
-  //   }
-  //
-  //   if (filter.type.value) {
-  //     usedFilters.push(filter.type.value);
-  //   }
-  //   return false;
-  // });
+  filters.forEach((filter) => {
+    const value = filter.type.value;
+    if (value && usedFilters.includes(value)) {
+      errors.push(`Filter types need to be uniq (${filter.type.label})`);
+      return true;
+    }
+
+    if (filter.type.value) {
+      usedFilters.push(filter.type.value);
+    }
+    return false;
+  });
   // .map((f) => f.type.value);
 
   //how to use valid per select ?
@@ -129,105 +112,6 @@ export const CentreonFilters = ({
         <Alert title="No filters selected" severity="info" />
       ) : (
         showFilters.map(({ type, filters: currentFilters, id }, i) => (
-          // <HorizontalGroup key={id}>
-          //   <InlineField label="type" labelWidth={20} invalid={!type.valid}>
-          //     <Select<string>
-          //       menuPlacement={forceBottom ? 'bottom' : 'auto'}
-          //       allowCreateWhileLoading={true}
-          //       options={types}
-          //       value={types?.find((resource) => resource.value === type.value) || type.value}
-          //       onChange={(value) => {
-          //         const newFilters = [...filters];
-          //         newFilters[i] = {
-          //           id,
-          //           filters: [],
-          //           type: {
-          //             ...type,
-          //             value: value.value || '',
-          //           },
-          //         };
-          //         setFilters(newFilters);
-          //       }}
-          //       loadingMessage="loading"
-          //       // invalid={!type.valid}
-          //       isLoading={types?.length <= 0}
-          //       width={50}
-          //     />
-          //   </InlineField>
-          //   <InlineField label="filter" labelWidth={20}>
-          //     <AsyncSelect<string>
-          //       menuPlacement={forceBottom ? 'bottom' : 'auto'}
-          //       cacheOptions={false}
-          //       isMulti={true}
-          //       disabled={!type.value}
-          //       allowCustomValue={true}
-          //       defaultValue={
-          //         resourcesLoaded[type.value || '']?.find(
-          //           (resource) => resource.value && !!currentFilters.find((f) => f.value === resource.value)
-          //         ) ||
-          //         (currentFilters || []).map((f) => ({
-          //           value: f.value,
-          //           label: f.label || f.value,
-          //         }))
-          //       }
-          //       loadOptions={async (name): Promise<Array<SelectableValue<string>>> => {
-          //         let ret: Array<SelectableValue<string>> = customFilters[type.value || ''] || [];
-          //
-          //         if (type.value) {
-          //           try {
-          //             //build the query :
-          //             // - get all filters from select
-          //             // - convert to object
-          //             const query = {
-          //               //prepare query object from all types
-          //               ...Object.fromEntries(
-          //                 (filters || []).map((f) => [f.type.value, f.filters.map((f) => f.value)])
-          //               ),
-          //             };
-          //
-          //             ret = ret.concat(
-          //               await getResources(type.value, {
-          //                 ...query,
-          //                 //add current text to the current query type . If query is empty, filter will remove the empty one
-          //                 [type.value]: [...query[type.value], name + '*'].filter((v) => !!v),
-          //               })
-          //             );
-          //           } catch (e) {
-          //             console.error(e);
-          //           }
-          //         } else {
-          //           return [];
-          //         }
-          //
-          //         return ret;
-          //       }}
-          //       onChange={(selectedValue) => {
-          //         const select = selectedValue as unknown as Array<SelectableValue<string>>;
-          //
-          //         const newFilters = [...filters];
-          //         newFilters[i] = {
-          //           id,
-          //           filters: select.map(({ value, label }) => ({
-          //             value,
-          //             label,
-          //           })),
-          //           type,
-          //         };
-          //         setFilters(newFilters);
-          //       }}
-          //       loadingMessage="loading"
-          //       width={50}
-          //     />
-          //   </InlineField>
-          //   <Button
-          //     type="button"
-          //     onClick={() => {
-          //       setFilters(filters.filter((value, index) => index != i));
-          //     }}
-          //     icon="times"
-          //     variant="secondary"
-          //   />
-          // </HorizontalGroup>
           <Filter
             key={id}
             defaultFilters={currentFilters}
