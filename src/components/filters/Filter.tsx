@@ -7,7 +7,7 @@ interface Props {
   forceBottom: boolean;
   customFilters?: Record<string, Array<SelectableValue<string>>>;
   getResource: (type: string, value: string) => SelectableValue<string>;
-  getResources: (type: string, query: Array<string>) => Promise<SelectableValue<string>>;
+  getResources: (type: string, query: string[]) => Promise<SelectableValue<string>>;
   onDelete?: () => void;
   onChange?: (type: SelectableValue<string>, filters: Array<SelectableValue<string>>) => void;
   defaultType: SelectableValue<string>;
@@ -27,7 +27,7 @@ export const Filter = ({
 }: Props) => {
   const [type, setType] = useState<SelectableValue<string>>(defaultType);
   const [filters, setFilters] = useState<Array<SelectableValue<string>>>(defaultFilters);
-  const val = useRef<{ filters: Array<string>; type: string }>({ filters: [], type: '' });
+  const val = useRef<{ filters: string[]; type: string }>({ filters: [], type: '' });
 
   useEffect(() => {
     if (

@@ -13,8 +13,8 @@ import { catchError, lastValueFrom } from 'rxjs';
 
 import { CentreonLoginResult, CentreonMetricOptions, defaultQuery, EAccess, ERoutes, MyQuery } from './@types/types';
 import { BackendSrvRequest, FetchResponse } from '@grafana/runtime/services/backendSrv';
-import { CentreonList, ITimeSeriesMetric } from './@types/centreonAPI';
-import { ISavedFilter } from './@types/ISavedFilter';
+import { CentreonList, TimeSeriesMetric } from './@types/centreonAPI';
+import { SavedFilter } from './@types/SavedFilter';
 import { defaults } from 'lodash';
 
 export class CentreonDataSource extends DataSourceApi<MyQuery, CentreonMetricOptions> {
@@ -154,7 +154,7 @@ export class CentreonDataSource extends DataSourceApi<MyQuery, CentreonMetricOpt
     };
   }
 
-  async metricFindQuery(query: MyQuery, options?: any): Promise<Array<MetricFindValue>> {
+  async metricFindQuery(query: MyQuery, options?: any): Promise<MetricFindValue[]> {
     const { resourceType, filters } = query;
 
     if (!resourceType?.value) {
@@ -178,7 +178,7 @@ export class CentreonDataSource extends DataSourceApi<MyQuery, CentreonMetricOpt
     const from = range.from.valueOf();
     const to = range.to.valueOf();
 
-    const data: Array<MutableDataFrame> = [];
+    const data: MutableDataFrame[] = [];
 
     await Promise.all(
       options.targets.map(async (target) => {
@@ -191,7 +191,7 @@ export class CentreonDataSource extends DataSourceApi<MyQuery, CentreonMetricOpt
         try {
           //call centreon timeSeries + build DataFrame (one per metric . One call can return multiple metrics)
           (
-            await this.call<CentreonList<ITimeSeriesMetric>>({
+            await this.call<CentreonList<TimeSeriesMetric>>({
               url: `/data-source/metrics/timeseries?${searchParams}`,
             })
           ).data.result.forEach((metric) => {
@@ -236,8 +236,8 @@ export class CentreonDataSource extends DataSourceApi<MyQuery, CentreonMetricOpt
     ).data.result.map(({ slug, display_name }) => ({ label: display_name, value: slug }));
   }
 
-  private convertArrayOfSavedFilterToMap(params?: Array<ISavedFilter>): Map<string, Array<string>> {
-    const standardsFilters: Map<string, Array<string>> = new Map<string, Array<string>>();
+  private convertArrayOfSavedFilterToMap(params?: SavedFilter[]): Map<string, string[]> {
+    const standardsFilters: Map<string, string[]> = new Map<string, string[]>();
 
     if (!params) {
       return standardsFilters;
@@ -259,8 +259,8 @@ export class CentreonDataSource extends DataSourceApi<MyQuery, CentreonMetricOpt
 
   private convertRecordOfStringsFilterToMap(
     params?: Record<string, undefined | string | Array<undefined | string>>
-  ): Map<string, Array<string>> {
-    const standardsFilters: Map<string, Array<string>> = new Map<string, Array<string>>();
+  ): Map<string, string[]> {
+    const standardsFilters: Map<string, string[]> = new Map<string, string[]>();
 
     if (!params) {
       return standardsFilters;
@@ -271,7 +271,7 @@ export class CentreonDataSource extends DataSourceApi<MyQuery, CentreonMetricOpt
         //filter params without type, or without filters, or empty filters
         .filter(
           ([type, pFilters]) => type && pFilters && Array.isArray(pFilters) && pFilters.filter((f) => !!f)
-        ) as Array<[string, string | Array<string>]>
+        ) as Array<[string, string | string[]]>
     )
       //then add them in map
       .forEach(([type, pFilters]) => {
@@ -283,9 +283,9 @@ export class CentreonDataSource extends DataSourceApi<MyQuery, CentreonMetricOpt
   }
 
   private interpolateVariables(
-    inputFilters: Map<string, Array<string>>,
+    inputFilters: Map<string, string[]>,
     scopedVars?: ScopedVars
-  ): Array<[string, Array<string>]> {
+  ): Array<[string, string[]]> {
     const templateSrv = getTemplateSrv();
 
     if (!templateSrv) {
@@ -307,6 +307,8 @@ export class CentreonDataSource extends DataSourceApi<MyQuery, CentreonMetricOpt
           const newFilters = Array.isArray(tmpNewFilters) ? tmpNewFilters : [tmpNewFilters];
 
           newFilters.forEach((value) => {
+            // disable eqeqeq to check if value to string == value (like a number)
+            /* eslint eqeqeq: "off" */
             if (value != value.toString() || typeof value.toString() !== 'string') {
               throw new Error(`filter "${value}" seems to not be a string`);
             }
@@ -320,11 +322,11 @@ export class CentreonDataSource extends DataSourceApi<MyQuery, CentreonMetricOpt
   }
 
   private generateUrlSearchParamsFilters(
-    params?: Record<string, undefined | string | Array<undefined | string>> | Array<ISavedFilter>,
+    params?: Record<string, undefined | string | Array<undefined | string>> | SavedFilter[],
     scopedVars?: ScopedVars
   ): URLSearchParams {
     // convert filters to a standards format
-    let standardsFilters: Map<string, Array<string>> = new Map<string, Array<string>>();
+    let standardsFilters: Map<string, string[]> = new Map<string, string[]>();
 
     if (Array.isArray(params)) {
       standardsFilters = this.convertArrayOfSavedFilterToMap(params);
@@ -336,7 +338,7 @@ export class CentreonDataSource extends DataSourceApi<MyQuery, CentreonMetricOpt
 
     const searchParams = new URLSearchParams();
 
-    Array.from(finalArray).forEach(([type, filters]: [string, Array<string>]) => {
+    Array.from(finalArray).forEach(([type, filters]: [string, string[]]) => {
       filters.forEach((filter) => searchParams.append(`${type}[]`, filter));
     });
 
@@ -345,7 +347,7 @@ export class CentreonDataSource extends DataSourceApi<MyQuery, CentreonMetricOpt
 
   async getResources(
     resourceType: string,
-    params?: Record<string, undefined | string | Array<undefined | string>> | Array<ISavedFilter>
+    params?: Record<string, undefined | string | Array<undefined | string>> | SavedFilter[]
   ): Promise<Array<{ label: string; value: string }>> {
     return (
       await this.call<CentreonList<{ id: string; name: string }>>({
@@ -355,14 +357,14 @@ export class CentreonDataSource extends DataSourceApi<MyQuery, CentreonMetricOpt
     //use ID or name in the value ?
   }
 
-  buildRawQuery(filters?: Array<ISavedFilter>): string {
+  buildRawQuery(filters?: SavedFilter[]): string {
     return (filters || [])
       .filter((value) => value.type && value.filters.length > 0)
       .map((value) => `${value.type.value}="${value.filters.map((f) => f.value).join(',')}"`)
       .join(' ');
   }
 
-  buildFiltersQuery(rawSelector?: string): Array<ISavedFilter> {
+  buildFiltersQuery(rawSelector?: string): SavedFilter[] {
     // TODO parse ( for the moment only imagine filters like (3 hosts) : host="tutu,tata,titi"
 
     return (rawSelector || '')

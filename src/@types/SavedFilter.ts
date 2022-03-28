@@ -1,6 +1,6 @@
 import { SelectableValue } from '@grafana/data';
 
-export interface ISavedFilter {
+export interface SavedFilter {
   id: number;
   type: SelectableValue<string>;
   filters: Array<SelectableValue<string>>;

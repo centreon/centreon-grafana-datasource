@@ -4,6 +4,7 @@
   "description": "",
   "scripts": {
     "build": "grafana-toolkit plugin:build",
+    "lint": "eslint src/**/*.ts",
     "test": "grafana-toolkit plugin:test",
     "dev": "grafana-toolkit plugin:dev",
     "watch": "grafana-toolkit plugin:dev --watch",
@@ -13,13 +14,13 @@
   "author": "Centreon",
   "license": "Apache-2.0",
   "devDependencies": {
-    "@grafana/data": "^8.4.2",
-    "@grafana/runtime": "^8.4.2",
-    "@grafana/toolkit": "^8.4.2",
-    "@grafana/ui": "^8.4.2",
-    "@testing-library/jest-dom": "5.4.0",
-    "@testing-library/react": "^10.0.2",
-    "@types/lodash": "^4.14.179",
+    "@grafana/data": "^8.4.4",
+    "@grafana/runtime": "^8.4.4",
+    "@grafana/toolkit": "^8.4.4",
+    "@grafana/ui": "^8.4.4",
+    "@testing-library/jest-dom": "5.16.3",
+    "@testing-library/react": "^12.1.4",
+    "@types/lodash": "^4.14.180",
     "react": "^17.0.2"
   },
   "engines": {

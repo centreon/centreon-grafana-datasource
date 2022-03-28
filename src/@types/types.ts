@@ -1,5 +1,5 @@
 import { DataQuery, DataSourceJsonData, SelectableValue } from '@grafana/data';
-import { ISavedFilter } from './ISavedFilter';
+import { SavedFilter } from './SavedFilter';
 import { EMode } from '../QueryEditor/EMode';
 
 export interface MyQuery extends DataQuery {
@@ -8,7 +8,7 @@ export interface MyQuery extends DataQuery {
   mode?: EMode;
 
   rawSelector?: string;
-  filters?: Array<ISavedFilter>;
+  filters?: SavedFilter[];
 }
 
 export const defaultQuery: Partial<MyQuery> = {
@@ -54,4 +54,4 @@ export interface CentreonLoginResult {
   };
 }
 
-export type tFilter = ISavedFilter & { type: SelectableValue<string> & { valid?: boolean } };
+export type tFilter = SavedFilter & { type: SelectableValue<string> & { valid?: boolean } };

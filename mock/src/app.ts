@@ -225,7 +225,7 @@ dataSourceRouter.get('/metrics/timeseries', ensureAuthenticated, (req, res) => {
   const to = new Date(Number(req.query.to) || Date.now());
   // const step = 5 * 1000;
 
-  let returnMetrics: Array<string>;
+  let returnMetrics: string[];
   if (metrics) {
     returnMetrics = Array.isArray(metrics) ? metrics.map((m) => m.toString()) : [metrics.toString()];
   } else {

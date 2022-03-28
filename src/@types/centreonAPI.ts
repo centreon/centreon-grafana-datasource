@@ -1,7 +1,7 @@
 import { isoDateString } from './commons';
 
 export interface CentreonList<T> {
-  result: Array<T>;
+  result: T[];
   meta: Meta;
 }
 
@@ -13,7 +13,7 @@ export interface Meta {
   total: number;
 }
 
-export interface ITimeSeriesMetric {
+export interface TimeSeriesMetric {
   id: number;
   name: string;
   unit: string;

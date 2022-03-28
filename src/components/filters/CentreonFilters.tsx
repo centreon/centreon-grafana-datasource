@@ -1,13 +1,13 @@
 import { Alert, Button } from '@grafana/ui';
 import { SelectableValue } from '@grafana/data';
 import React, { useEffect, useState, useCallback } from 'react';
-import { ISavedFilter } from '../../@types/ISavedFilter';
+import { SavedFilter } from '../../@types/SavedFilter';
 import { CentreonDataSource } from '../../centreonDataSource';
 import { Filter } from './Filter';
 
 type Props = {
-  filters?: Array<ISavedFilter>;
-  onChange: (filters: Array<ISavedFilter>) => void;
+  filters?: Array<SavedFilter>;
+  onChange: (filters: Array<SavedFilter>) => void;
   datasource: CentreonDataSource;
   types?: Array<SelectableValue<string>>;
   customFilters?: Record<string, Array<SelectableValue<string>>>;
@@ -24,7 +24,7 @@ export const CentreonFilters = ({
   customFilters = {},
   forceBottom = false,
 }: Props) => {
-  const [filters, setFilters] = useState<Array<ISavedFilter>>(defaultFilters || []);
+  const [filters, setFilters] = useState<Array<SavedFilter>>(defaultFilters || []);
 
   const getResource = useCallback(
     (type: string, value: string): SelectableValue<string> =>
@@ -43,11 +43,13 @@ export const CentreonFilters = ({
    * 5 - return the result
    */
   const getResources = useCallback(
-    async (type: string, queryFilters: Array<string>): Promise<SelectableValue<string>> => {
+    async (type: string, queryFilters: string[]): Promise<SelectableValue<string>> => {
       try {
         const query = {
           //prepare query object from all types
-          ...Object.fromEntries((filters || []).map((filter) => [filter.type.value, filter.filters.map((f) => f.value)])),
+          ...Object.fromEntries(
+            (filters || []).map((filter) => [filter.type.value, filter.filters.map((f) => f.value)])
+          ),
         };
 
         const res = await datasource.getResources(type, {
@@ -74,10 +76,10 @@ export const CentreonFilters = ({
     onChange(filters);
   }, [filters]);
 
-  let errors: Array<string> = [];
+  let errors: string[] = [];
 
   //search filters in double
-  const usedFilters: Array<string> = [];
+  const usedFilters: string[] = [];
 
   // TODO useless, only used to add errors in the errors array
   // const doubleFilters =

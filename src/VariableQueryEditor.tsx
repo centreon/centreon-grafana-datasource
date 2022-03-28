@@ -3,7 +3,7 @@ import { CentreonMetricOptions, MyQuery } from './@types/types';
 import { QueryEditorProps, SelectableValue } from '@grafana/data';
 import { CentreonDataSource } from './centreonDataSource';
 import { Alert, ErrorBoundary, InlineField, Select } from '@grafana/ui';
-import { ISavedFilter } from './@types/ISavedFilter';
+import { SavedFilter } from './@types/SavedFilter';
 import { CentreonFilters } from './components/filters/CentreonFilters';
 
 interface VariableQueryEditorState extends MyQuery {}
@@ -13,7 +13,7 @@ export const VariableQueryEditor: React.FC<
 > = (props) => {
   const { query, onChange } = props;
   const [state, setState] = useState(query);
-  const [filters, setFilters] = useState<Array<ISavedFilter>>(state.filters || []);
+  const [filters, setFilters] = useState<Array<SavedFilter>>(state.filters || []);
 
   const [resources, setResources] = useState<Record<'__types' | string, Array<SelectableValue<string>>>>({});
 
