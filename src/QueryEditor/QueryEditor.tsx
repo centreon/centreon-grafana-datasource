@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import { css } from '@emotion/css';
 import { QueryEditorProps } from '@grafana/data';
 import { CentreonDataSource } from '../centreonDataSource';
@@ -12,13 +12,20 @@ import { RawCentreonQueryEditor } from './RawCentreonQueryEditor';
 type Props = QueryEditorProps<CentreonDataSource, MyQuery, CentreonMetricOptions>;
 
 export const QueryEditor: React.FC<Props> = (props: Props) => {
-  const { query, onRunQuery, onChange, datasource } = props;
-  const onRunQueryDebounced = debounce(onRunQuery, 300);
+  const { query, onRunQuery, onChange: pOnchange, datasource } = props;
   const state = defaults(query, defaultQuery);
+
+  const onRunQueryDebounced = useCallback(() => debounce(onRunQuery, 300)(), [onRunQuery]);
+
+  const onChange = useCallback((value: MyQuery) => {
+    pOnchange(value);
+    // onChange from parent seems to change everytime, and so create an infinite loop
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     onRunQueryDebounced();
-  }, [query]);
+  }, [query, onRunQueryDebounced]);
 
   const mode = state.mode ?? EMode.VISUAL;
 

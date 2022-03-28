@@ -6,8 +6,8 @@ import { CentreonDataSource } from '../../centreonDataSource';
 import { Filter } from './Filter';
 
 type Props = {
-  filters?: Array<SavedFilter>;
-  onChange: (filters: Array<SavedFilter>) => void;
+  filters?: SavedFilter[];
+  onChange: (filters: SavedFilter[]) => void;
   datasource: CentreonDataSource;
   types?: Array<SelectableValue<string>>;
   customFilters?: Record<string, Array<SelectableValue<string>>>;
@@ -24,7 +24,7 @@ export const CentreonFilters = ({
   customFilters = {},
   forceBottom = false,
 }: Props) => {
-  const [filters, setFilters] = useState<Array<SavedFilter>>(defaultFilters || []);
+  const [filters, setFilters] = useState<SavedFilter[]>(defaultFilters || []);
 
   const getResource = useCallback(
     (type: string, value: string): SelectableValue<string> =>
@@ -32,7 +32,7 @@ export const CentreonFilters = ({
         value: value,
         label: value,
       },
-    [resourcesLoaded]
+    []
   );
 
   /**
@@ -69,12 +69,12 @@ export const CentreonFilters = ({
         return [];
       }
     },
-    [filters]
+    [filters, datasource]
   );
 
   useEffect(() => {
     onChange(filters);
-  }, [filters]);
+  }, [filters, onChange]);
 
   let errors: string[] = [];
 
@@ -123,7 +123,7 @@ export const CentreonFilters = ({
             getResources={getResources}
             getResource={getResource}
             types={types}
-            onDelete={() => setFilters(filters.filter((value, index) => index != i))}
+            onDelete={() => setFilters(filters.filter((value, index) => index !== i))}
             onChange={(updatedType, updatedFilters) => {
               const newFilters = [...filters];
               newFilters[i] = {
@@ -137,7 +137,7 @@ export const CentreonFilters = ({
         ))
       )}
       <div className="gf-form">
-        {errors.length == 0
+        {errors.length === 0
           ? ''
           : errors.map((error, index) => (
               <React.Fragment key={index}>

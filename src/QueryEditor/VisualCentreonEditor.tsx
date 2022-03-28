@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { MyQuery } from '../@types/types';
 import { CentreonDataSource } from '../centreonDataSource';
 import { SelectableValue, VariableModel } from '@grafana/data';
 import { getTemplateSrv } from '@grafana/runtime';
 import { CentreonFilters } from '../components/filters/CentreonFilters';
+import { SavedFilter } from '../@types/SavedFilter';
 
 type Props = {
   query: MyQuery;
@@ -55,12 +56,19 @@ export const VisualCentreonEditor = ({ onChange, datasource, query }: Props) => 
       customFilters[type].push({ label: `$${v.name}`, value: `$${v.name}` });
     });
 
+  const filtersChange = useCallback(
+    (filters: SavedFilter[]) => {
+      onChange({ ...query, filters });
+    },
+    // don't know how to resolve it . And other parts of query are not important
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [onChange]
+  );
+
   return (
     <CentreonFilters
       filters={query.filters}
-      onChange={(filters) => {
-        onChange({ ...query, filters });
-      }}
+      onChange={filtersChange}
       forceBottom={true}
       datasource={datasource}
       types={resources.__types}

@@ -13,7 +13,7 @@ export const VariableQueryEditor: React.FC<
 > = (props) => {
   const { query, onChange } = props;
   const [state, setState] = useState(query);
-  const [filters, setFilters] = useState<Array<SavedFilter>>(state.filters || []);
+  const [filters, setFilters] = useState<SavedFilter[]>(state.filters || []);
 
   const [resources, setResources] = useState<Record<'__types' | string, Array<SelectableValue<string>>>>({});
 

@@ -31,8 +31,8 @@ export const Filter = ({
 
   useEffect(() => {
     if (
-      JSON.stringify(val.current.filters) != JSON.stringify(filters.map((f) => f.value)) ||
-      val.current.type != type.value
+      JSON.stringify(val.current.filters) !== JSON.stringify(filters.map((f) => f.value)) ||
+      val.current.type !== type.value
     ) {
       onChange?.(type, filters);
       val.current = {

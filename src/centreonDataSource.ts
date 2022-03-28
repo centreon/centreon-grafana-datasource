@@ -360,16 +360,18 @@ export class CentreonDataSource extends DataSourceApi<MyQuery, CentreonMetricOpt
   buildRawQuery(filters?: SavedFilter[]): string {
     return (filters || [])
       .filter((value) => value.type && value.filters.length > 0)
-      .map((value) => `${value.type.value}="${value.filters.map((f) => f.value).join(',')}"`)
+      .map((value) => `${value.type.value}="${value.filters.map((f) => f.value).join('","')}"`)
       .join(' ');
   }
 
   buildFiltersQuery(rawSelector?: string): SavedFilter[] {
-    // TODO parse ( for the moment only imagine filters like (3 hosts) : host="tutu,tata,titi"
-
     return (rawSelector || '')
       ?.split(' ')
       .filter((v) => !!v)
+      .map((v) => {
+        console.log(/[=,](?:"([^"]*(?:""[^"]*)*)"|([^",\r\n]*))/gi.exec(v));
+        return v;
+      })
       .map((group) => group.split('='))
       .map(([type, filters]) => ({
         id: Date.now(),
@@ -377,12 +379,15 @@ export class CentreonDataSource extends DataSourceApi<MyQuery, CentreonMetricOpt
           label: type,
           value: type,
         },
-        filters: filters.split(',').map((f) => {
-          const value = f.slice(1, -1);
-
+        filters: [...(',' + filters).matchAll(/[=,](?:"([^"]*(?:""[^"]*)*)"|([^",\r\n]*))/gi)].map((fullMatch) => {
+          const [, m1, m2, m3] = fullMatch;
+          const filter = m1 || m2 || m3;
+          if (!filter) {
+            throw new Error(`something is wrong with the current filter : ${JSON.stringify(fullMatch)}`);
+          }
           return {
-            label: value,
-            value,
+            label: filter,
+            value: filter,
           };
         }),
       }));
