@@ -5,6 +5,7 @@ import { CentreonDataSource } from './centreonDataSource';
 import { Alert, ErrorBoundary, InlineField, Select } from '@grafana/ui';
 import { SavedFilter } from './@types/SavedFilter';
 import { CentreonFilters } from './components/filters/CentreonFilters';
+import { MBIResourceType } from './@types/centreonAPI';
 
 interface VariableQueryEditorState extends MyQuery {}
 
@@ -15,23 +16,18 @@ export const VariableQueryEditor: React.FC<
   const [state, setState] = useState(query);
   const [filters, setFilters] = useState<SavedFilter[]>(state.filters || []);
 
-  const [resources, setResources] = useState<Record<'__types' | string, Array<SelectableValue<string>>>>({});
+  const [resources, setResources] = useState<Record<'__types' | string, Array<SelectableValue<MBIResourceType>>>>({});
 
   useEffect(() => {
     (async () => {
       try {
         //load resources types
-        const resourcesOptions = (await props.datasource.getResourceList()).map(
-          ({ value, label }) =>
-            ({
-              label,
-              value,
-            } as SelectableValue<string>)
-        );
+        const resourcesOptions = await props.datasource.getResourceList();
         setResources({
           __types: resourcesOptions,
         });
       } catch (e) {
+        console.error(e);
         setState(() => {
           throw new Error('unknown error');
         });
@@ -48,12 +44,23 @@ export const VariableQueryEditor: React.FC<
   }, [onChange, props.datasource, filters, state]);
 
   const resourceFieldLength =
-    Number(resources.__types?.map((a) => a.value || '').sort((a, b) => b.length - a.length)[0]?.length || 10) + 4;
+    Number(
+      resources.__types
+        ?.map(
+          (a) =>
+            a.value || {
+              slug: '',
+              display_name: '',
+              list_endpoint: '',
+            }
+        )
+        .sort((a, b) => b.slug.length - a.slug.length)[0]?.slug.length || 10
+    ) + 4;
 
   return (
     <>
       <InlineField label="Resource" labelWidth={20}>
-        <Select<string>
+        <Select<MBIResourceType>
           allowCustomValue={true}
           onCreateOption={(value) => {
             console.log('create option', value);
@@ -69,7 +76,7 @@ export const VariableQueryEditor: React.FC<
             });
           }}
           loadingMessage="loading"
-          isLoading={resources.__types?.length <= 0}
+          isLoading={!resources.__types || resources.__types?.length <= 0}
           width={resourceFieldLength}
         />
       </InlineField>

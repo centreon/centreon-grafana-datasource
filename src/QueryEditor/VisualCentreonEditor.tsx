@@ -5,6 +5,7 @@ import { SelectableValue, VariableModel } from '@grafana/data';
 import { getTemplateSrv } from '@grafana/runtime';
 import { CentreonFilters } from '../components/filters/CentreonFilters';
 import { SavedFilter } from '../@types/SavedFilter';
+import { MBIResourceType } from '../@types/centreonAPI';
 
 type Props = {
   query: MyQuery;
@@ -14,20 +15,15 @@ type Props = {
 };
 
 export const VisualCentreonEditor = ({ onChange, datasource, query }: Props) => {
-  const [resources, setResources] = useState<Record<'__types' | string, Array<SelectableValue<string>>>>({});
+  const [resources, setResources] = useState<Record<'__types' | string, Array<SelectableValue<MBIResourceType>>>>({});
 
   // this is duplicated, but no idea how to do it correctly for the moment
   useEffect(() => {
     (async () => {
       try {
         //load resources types
-        const resourcesOptions = (await datasource.getResourceList()).map(
-          ({ value, label }) =>
-            ({
-              label,
-              value,
-            } as SelectableValue<string>)
-        );
+        const resourcesOptions = await datasource.getResourceList();
+
         setResources({
           __types: resourcesOptions,
         });
@@ -49,11 +45,11 @@ export const VisualCentreonEditor = ({ onChange, datasource, query }: Props) => 
         //never pass here if variable correctly set
         return;
       }
-      if (!customFilters[type]) {
-        customFilters[type] = [];
+      if (!customFilters[type.slug]) {
+        customFilters[type.slug] = [];
       }
 
-      customFilters[type].push({ label: `$${v.name}`, value: `$${v.name}` });
+      customFilters[type.slug].push({ label: `$${v.name}`, value: `$${v.name}` });
     });
 
   const filtersChange = useCallback(

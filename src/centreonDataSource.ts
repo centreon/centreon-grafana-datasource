@@ -7,13 +7,14 @@ import {
   MetricFindValue,
   MutableDataFrame,
   ScopedVars,
+  SelectableValue,
 } from '@grafana/data';
 import { FetchError, getBackendSrv, getTemplateSrv } from '@grafana/runtime';
 import { catchError, lastValueFrom } from 'rxjs';
 
 import { CentreonLoginResult, CentreonMetricOptions, defaultQuery, EAccess, ERoutes, MyQuery } from './@types/types';
 import { BackendSrvRequest, FetchResponse } from '@grafana/runtime/services/backendSrv';
-import { CentreonList, TimeSeriesMetric } from './@types/centreonAPI';
+import { CentreonList, TimeSeriesMetric, MBIResourceType } from './@types/centreonAPI';
 import { SavedFilter } from './@types/SavedFilter';
 import { defaults } from 'lodash';
 
@@ -37,6 +38,9 @@ export class CentreonDataSource extends DataSourceApi<MyQuery, CentreonMetricOpt
     }
 
     this.url = instanceSettings.url;
+    if (this.url.slice(-1) === '/') {
+      this.url = this.url.slice(0, -1);
+    }
 
     if (centreonURL.slice(-1) === '/') {
       centreonURL = centreonURL.slice(0, -1);
@@ -162,9 +166,9 @@ export class CentreonDataSource extends DataSourceApi<MyQuery, CentreonMetricOpt
     }
 
     const filtersPart = (filters || [])
-      .map((value) => `${value.type.value}=${value.filters.map((f) => f.value).join(',')}`)
+      .map((value) => `${value.type.value?.slug}=${value.filters.map((f) => f.value).join(',')}`)
       .join(' ');
-    console.log(`need to query resource "${resourceType?.value}" with filters : ${filtersPart}`);
+    console.log(`need to query resource "${resourceType?.value.slug}" with filters : ${filtersPart}`);
 
     return (await this.getResources(resourceType.value, filters)).map(({ label, value }) => ({
       text: label,
@@ -175,8 +179,8 @@ export class CentreonDataSource extends DataSourceApi<MyQuery, CentreonMetricOpt
 
   async query(options: DataQueryRequest<MyQuery>): Promise<DataQueryResponse> {
     const { range } = options;
-    const from = range.from.valueOf();
-    const to = range.to.valueOf();
+    const from = range.from.toISOString();
+    const to = range.to.toISOString();
 
     const data: MutableDataFrame[] = [];
 
@@ -186,8 +190,8 @@ export class CentreonDataSource extends DataSourceApi<MyQuery, CentreonMetricOpt
 
         const searchParams = this.generateUrlSearchParamsFilters(query.filters, options.scopedVars);
 
-        searchParams.append('to', to.toString());
-        searchParams.append('from', from.toString());
+        searchParams.append('end', to.toString());
+        searchParams.append('start', from.toString());
         try {
           //call centreon timeSeries + build DataFrame (one per metric . One call can return multiple metrics)
           (
@@ -223,17 +227,19 @@ export class CentreonDataSource extends DataSourceApi<MyQuery, CentreonMetricOpt
     return { data };
   }
 
-  async getResourceList(): Promise<Array<{ value: string; label: string }>> {
+  async getResourceList(): Promise<Array<SelectableValue<MBIResourceType>>> {
     return (
-      await this.call<
-        CentreonList<{
-          slug: string;
-          display_name: string;
-        }>
-      >({
+      await this.call<MBIResourceType[]>({
         url: '/data-source/types',
       })
-    ).data.result.map(({ slug, display_name }) => ({ label: display_name, value: slug }));
+    ).data.map((type) => ({
+      label: type.display_name,
+      value: {
+        ...type,
+        //keep only the last part of the list_endpoint
+        list_endpoint: type.list_endpoint.split('/').pop() || '',
+      },
+    }));
   }
 
   private convertArrayOfSavedFilterToMap(params?: SavedFilter[]): Map<string, string[]> {
@@ -248,7 +254,7 @@ export class CentreonDataSource extends DataSourceApi<MyQuery, CentreonMetricOpt
       .filter(({ type }) => !!type.value)
       .forEach(({ type, filters }) => {
         standardsFilters.set(
-          type.value!,
+          type.value?.slug!,
           //filter empty filters, and save array
           filters.filter(({ value }) => !!value).map(({ value }) => value!)
         );
@@ -346,12 +352,18 @@ export class CentreonDataSource extends DataSourceApi<MyQuery, CentreonMetricOpt
   }
 
   async getResources(
-    resourceType: string,
+    resourceType: MBIResourceType,
     params?: Record<string, undefined | string | Array<undefined | string>> | SavedFilter[]
   ): Promise<Array<{ label: string; value: string }>> {
+    if (resourceType.list_endpoint === '') {
+      return [];
+    }
+
     return (
       await this.call<CentreonList<{ id: string; name: string }>>({
-        url: `/data-source/${resourceType}${params ? '?' + this.generateUrlSearchParamsFilters(params) : ''}`,
+        url: `/data-source/${resourceType.list_endpoint}${
+          params ? '?' + this.generateUrlSearchParamsFilters(params) : ''
+        }`,
       })
     ).data.result.map(({ name }) => ({ label: name, value: name }));
     //use ID or name in the value ?
@@ -364,7 +376,9 @@ export class CentreonDataSource extends DataSourceApi<MyQuery, CentreonMetricOpt
       .join(' ');
   }
 
-  buildFiltersQuery(rawSelector?: string): SavedFilter[] {
+  async buildFiltersQuery(rawSelector?: string): Promise<SavedFilter[]> {
+    const types = await this.getResourceList();
+
     return (rawSelector || '')
       ?.split(' ')
       .filter((v) => !!v)
@@ -373,23 +387,31 @@ export class CentreonDataSource extends DataSourceApi<MyQuery, CentreonMetricOpt
         return v;
       })
       .map((group) => group.split('='))
-      .map(([type, filters]) => ({
-        id: Date.now(),
-        type: {
-          label: type,
-          value: type,
-        },
-        filters: [...(',' + filters).matchAll(/[=,](?:"([^"]*(?:""[^"]*)*)"|([^",\r\n]*))/gi)].map((fullMatch) => {
-          const [, m1, m2, m3] = fullMatch;
-          const filter = m1 || m2 || m3;
-          if (!filter) {
-            throw new Error(`something is wrong with the current filter : ${JSON.stringify(fullMatch)}`);
-          }
-          return {
-            label: filter,
-            value: filter,
-          };
-        }),
-      }));
+      .map(([type, filters]) => {
+        const currentType: SelectableValue<MBIResourceType> | undefined = types.find((t) => t.value?.slug === type);
+
+        if (!currentType) {
+          throw new Error(`fail to find type "${type}"`);
+        }
+
+        return {
+          id: Date.now(),
+          type: {
+            label: type,
+            value: currentType.value,
+          },
+          filters: [...(',' + filters).matchAll(/[=,](?:"([^"]*(?:""[^"]*)*)"|([^",\r\n]*))/gi)].map((fullMatch) => {
+            const [, m1, m2, m3] = fullMatch;
+            const filter = m1 || m2 || m3;
+            if (!filter) {
+              throw new Error(`something is wrong with the current filter : ${JSON.stringify(fullMatch)}`);
+            }
+            return {
+              label: filter,
+              value: filter,
+            };
+          }),
+        };
+      });
   }
 }

@@ -1,9 +1,10 @@
 import { DataQuery, DataSourceJsonData, SelectableValue } from '@grafana/data';
 import { SavedFilter } from './SavedFilter';
 import { EMode } from '../QueryEditor/EMode';
+import { MBIResourceType } from './centreonAPI';
 
 export interface MyQuery extends DataQuery {
-  resourceType?: SelectableValue<string>;
+  resourceType?: SelectableValue<MBIResourceType>;
 
   mode?: EMode;
 
@@ -55,3 +56,5 @@ export interface CentreonLoginResult {
 }
 
 export type tFilter = SavedFilter & { type: SelectableValue<string> & { valid?: boolean } };
+
+export type TypeFilter = SelectableValue<MBIResourceType>;

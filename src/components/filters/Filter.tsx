@@ -1,16 +1,18 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { AsyncSelect, Button, HorizontalGroup, InlineField, Select } from '@grafana/ui';
 import { SelectableValue } from '@grafana/data';
+import { MBIResourceType } from '../../@types/centreonAPI';
+import { TypeFilter } from '../../@types/types';
 
 interface Props {
-  types: Array<SelectableValue<string>>;
+  types: TypeFilter[];
   forceBottom: boolean;
   customFilters?: Record<string, Array<SelectableValue<string>>>;
-  getResource: (type: string, value: string) => SelectableValue<string>;
-  getResources: (type: string, query: string[]) => Promise<SelectableValue<string>>;
+  getResource: (type: MBIResourceType, value: string) => SelectableValue<string>;
+  getResources: (type: MBIResourceType, query: string[]) => Promise<SelectableValue<string>>;
   onDelete?: () => void;
-  onChange?: (type: SelectableValue<string>, filters: Array<SelectableValue<string>>) => void;
-  defaultType: SelectableValue<string>;
+  onChange?: (type: TypeFilter, filters: Array<SelectableValue<string>>) => void;
+  defaultType: TypeFilter;
   defaultFilters: Array<SelectableValue<string>>;
 }
 
@@ -25,9 +27,12 @@ export const Filter = ({
   defaultFilters,
   defaultType,
 }: Props) => {
-  const [type, setType] = useState<SelectableValue<string>>(defaultType);
+  const [type, setType] = useState<TypeFilter>(defaultType);
   const [filters, setFilters] = useState<Array<SelectableValue<string>>>(defaultFilters);
-  const val = useRef<{ filters: string[]; type: string }>({ filters: [], type: '' });
+  const val = useRef<{ filters: string[]; type: MBIResourceType | null }>({
+    filters: [],
+    type: null,
+  });
 
   useEffect(() => {
     if (
@@ -36,7 +41,7 @@ export const Filter = ({
     ) {
       onChange?.(type, filters);
       val.current = {
-        type: type.value || '',
+        type: type.value || null,
         filters: filters.map((f) => f.value || ''),
       };
     }
@@ -44,23 +49,31 @@ export const Filter = ({
 
   const menuPlacement = forceBottom ? 'bottom' : 'auto';
 
+  const loadedFilter = types?.find((resource) => resource.value?.slug === type.value?.slug);
+  const typesLoading = !types || types.length === 0;
+
   return (
     <HorizontalGroup>
       <InlineField label="type" labelWidth={20}>
-        <Select<string>
+        <Select<MBIResourceType>
           menuPlacement={forceBottom ? 'bottom' : 'auto'}
           allowCreateWhileLoading={true}
           options={types}
-          value={types?.find((resource) => resource.value === type.value) || type.value}
+          value={
+            loadedFilter || {
+              label: type.value?.display_name,
+              value: type.value,
+            }
+          }
           onChange={setType}
           loadingMessage="loading"
           // invalid={!type.valid}
-          isLoading={types?.length <= 0}
+          isLoading={typesLoading}
           width={50}
         />
       </InlineField>
       <InlineField label="filter" labelWidth={20}>
-        {type.value ? (
+        {!!loadedFilter ? (
           <AsyncSelect<string>
             menuPlacement={menuPlacement}
             cacheOptions={false}
@@ -70,7 +83,7 @@ export const Filter = ({
             allowCustomValue={true}
             defaultValue={filters.map((f) => getResource(type.value!, f.value!))}
             loadOptions={async (name): Promise<Array<SelectableValue<string>>> => {
-              let ret: Array<SelectableValue<string>> = customFilters[type.value || ''] || [];
+              let ret: Array<SelectableValue<string>> = customFilters[type.value?.slug || ''] || [];
 
               if (type.value) {
                 try {
@@ -103,6 +116,8 @@ export const Filter = ({
           <Select<string>
             menuPlacement={menuPlacement}
             allowCreateWhileLoading={false}
+            isLoading={typesLoading}
+            loadingMessage="loading"
             options={[]}
             onChange={() => {}}
             noOptionsMessage={'you need to select a type before'}

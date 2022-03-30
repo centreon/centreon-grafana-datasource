@@ -1,5 +1,6 @@
 import express, { Router } from 'express';
 import cors from 'cors';
+import { MBIResourceType } from '../../src/@types/centreonAPI';
 
 function getRandomArbitrary(min: number, max: number) {
   return Math.round(Math.random() * (max - min) + min);
@@ -40,7 +41,7 @@ function ensureAuthenticated(req: express.Request, res: express.Response, next: 
 router.post('/login', (req, res) => {
   const { body } = req;
 
-  if (body?.security?.credentials?.password == 'toto') {
+  if (body?.security?.credentials?.password === 'centreon') {
     // token valid 30 minutes to test
     res.send({
       contact: {
@@ -63,70 +64,34 @@ const dataSourceRouter = Router();
 
 router.use('/data-source', dataSourceRouter);
 
-interface IResource {
-  display_name: string;
-  slug: string;
-  endpoint: string;
-}
-
-const resourcesTypes: Array<IResource> = [
+const resourcesTypes: MBIResourceType[] = [
+  { slug: 'host', display_name: 'host', list_endpoint: '/centreon/api/latest/data-source/hosts' },
   {
-    endpoint: '/api/latest/data-source/host',
-    slug: 'host',
-    display_name: 'Host',
-  },
-  {
-    endpoint: '/api/latest/data-source/service',
-    slug: 'service',
-    display_name: 'Service',
-  },
-  {
-    endpoint: '/api/latest/data-source/host-group',
     slug: 'host-group',
     display_name: 'host group',
+    list_endpoint: '/centreon/api/latest/data-source/host-groups',
   },
   {
-    endpoint: '/api/latest/data-source/service-group',
-    slug: 'service-group',
-    display_name: 'Service group',
-  },
-  {
-    endpoint: '/api/latest/data-source/metaservice',
     slug: 'metaservice',
-    display_name: 'Meta Service',
+    display_name: 'metaservice',
+    list_endpoint: '/centreon/api/latest/data-source/metaservices',
+  },
+  { slug: 'metric', display_name: 'metric', list_endpoint: '/centreon/api/latest/data-source/metrics' },
+  { slug: 'service', display_name: 'service', list_endpoint: '/centreon/api/latest/data-source/services' },
+  {
+    slug: 'service-group',
+    display_name: 'service group',
+    list_endpoint: '/centreon/api/latest/data-source/service-groups',
   },
   {
-    endpoint: '/api/latest/data-source/metric',
-    slug: 'metric',
-    display_name: 'Metric',
-  },
-  {
-    endpoint: '/api/latest/data-source/virtual-metric',
     slug: 'virtual-metric',
-    display_name: 'Virtual Metric',
-  },
-  {
-    endpoint: '/api/latest/data-source/business-activity',
-    slug: 'business-activity',
-    display_name: 'Business Activity',
-  },
-  {
-    endpoint: '/api/latest/data-source/anomaly-detection',
-    slug: 'anomaly-detection',
-    display_name: 'Anomaly Detection Service',
+    display_name: 'virtual metric',
+    list_endpoint: '/centreon/api/latest/data-source/virtual-metrics',
   },
 ];
+
 dataSourceRouter.get('/types', ensureAuthenticated, (req, res) => {
-  res.send({
-    result: resourcesTypes,
-    meta: {
-      page: 1,
-      limit: 10,
-      search: {},
-      sort_by: {},
-      total: 1,
-    },
-  });
+  res.send(resourcesTypes);
 });
 
 const typeRet: Record<string, Array<{ name: string; [key: string]: string }>> = {
@@ -183,8 +148,8 @@ const typeRet: Record<string, Array<{ name: string; [key: string]: string }>> = 
   ],
 };
 
-const createEndpoint = ({ endpoint, slug }: IResource) => {
-  dataSourceRouter.get(`/${endpoint.split('/').pop()}`, ensureAuthenticated, (req: express.Request, res) => {
+const createEndpoint = ({ list_endpoint, slug }: MBIResourceType) => {
+  dataSourceRouter.get(`/${list_endpoint.split('/').pop()}`, ensureAuthenticated, (req: express.Request, res) => {
     const name = req.query[slug]?.toString()?.replace('*', '') || '';
 
     const retTypes = typeRet[slug] || [];
@@ -221,8 +186,8 @@ dataSourceRouter.get('/metrics/timeseries', ensureAuthenticated, (req, res) => {
   const { metrics } = req.query;
   console.log(metrics);
 
-  const from = new Date(Number(req.query.from) || Date.now() - 3 * 60 * 60 * 1000);
-  const to = new Date(Number(req.query.to) || Date.now());
+  const from = new Date(req.query.start?.toString() || Date.now() - 3 * 60 * 60 * 1000);
+  const to = new Date(req.query.end?.toString() || Date.now());
   // const step = 5 * 1000;
 
   let returnMetrics: string[];

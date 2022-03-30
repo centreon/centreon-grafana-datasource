@@ -4,12 +4,13 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { SavedFilter } from '../../@types/SavedFilter';
 import { CentreonDataSource } from '../../centreonDataSource';
 import { Filter } from './Filter';
+import { MBIResourceType } from '../../@types/centreonAPI';
 
 type Props = {
   filters?: SavedFilter[];
   onChange: (filters: SavedFilter[]) => void;
   datasource: CentreonDataSource;
-  types?: Array<SelectableValue<string>>;
+  types?: Array<SelectableValue<MBIResourceType>>;
   customFilters?: Record<string, Array<SelectableValue<string>>>;
   forceBottom?: boolean;
 };
@@ -27,8 +28,8 @@ export const CentreonFilters = ({
   const [filters, setFilters] = useState<SavedFilter[]>(defaultFilters || []);
 
   const getResource = useCallback(
-    (type: string, value: string): SelectableValue<string> =>
-      resourcesLoaded[type || '']?.find((resource) => resource.value && value === resource.value) || {
+    (type: MBIResourceType, value: string): SelectableValue<string> =>
+      resourcesLoaded[type.slug || '']?.find((resource) => resource.value && value === resource.value) || {
         value: value,
         label: value,
       },
@@ -43,7 +44,7 @@ export const CentreonFilters = ({
    * 5 - return the result
    */
   const getResources = useCallback(
-    async (type: string, queryFilters: string[]): Promise<SelectableValue<string>> => {
+    async (type: MBIResourceType, queryFilters: string[]): Promise<SelectableValue<string>> => {
       try {
         const query = {
           //prepare query object from all types
@@ -54,9 +55,9 @@ export const CentreonFilters = ({
 
         const res = await datasource.getResources(type, {
           ...query,
-          [type]: queryFilters,
+          [type.slug]: queryFilters,
         });
-        resourcesLoaded[type] = (resourcesLoaded[type] || [])
+        resourcesLoaded[type.slug] = (resourcesLoaded[type.slug] || [])
           //add new resources to previous list
           .concat(res)
           //remove duplicate based on .value
@@ -72,41 +73,35 @@ export const CentreonFilters = ({
     [filters, datasource]
   );
 
-  useEffect(() => {
-    onChange(filters);
-  }, [filters, onChange]);
-
   let errors: string[] = [];
 
   //search filters in double
   const usedFilters: string[] = [];
-
-  // TODO useless, only used to add errors in the errors array
-  // const doubleFilters =
   filters.forEach((filter) => {
     const value = filter.type.value;
-    if (value && usedFilters.includes(value)) {
+    if (value?.slug && usedFilters.includes(value.slug)) {
       errors.push(`Filter types need to be uniq (${filter.type.label})`);
       return true;
     }
 
     if (filter.type.value) {
-      usedFilters.push(filter.type.value);
+      usedFilters.push(filter.type.value.slug);
     }
     return false;
   });
-  // .map((f) => f.type.value);
-
-  //how to use valid per select ?
-  // const showFilters: Array<tFilter> = filters.map((filter) => ({
-  //   ...filter,
-  //   valid: !doubleFilters.includes(filter.type.value),
-  // }));
 
   const showFilters = filters;
 
   //remove duplicate errors
   errors = [...new Set(errors)];
+
+  useEffect(() => {
+    if (errors && errors.length === 0) {
+      onChange(filters);
+    }
+    //want to include errors, but produce a loop
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters, onChange]);
 
   return (
     <div className="gf-form-group">
@@ -150,7 +145,21 @@ export const CentreonFilters = ({
         <Button
           type="button"
           onClick={() => {
-            setFilters([...filters, { type: { value: '', valid: false }, filters: [], id: Date.now() }]);
+            setFilters([
+              ...filters,
+              {
+                type: {
+                  value: {
+                    slug: '',
+                    list_endpoint: '',
+                    display_name: '',
+                  },
+                  valid: false,
+                },
+                filters: [],
+                id: Date.now(),
+              },
+            ]);
           }}
         >
           Add Filter

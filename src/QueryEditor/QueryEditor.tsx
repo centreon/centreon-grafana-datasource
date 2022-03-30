@@ -34,7 +34,7 @@ export const QueryEditor: React.FC<Props> = (props: Props) => {
       <div className={css({ marginTop: '10px' })}>
         <QueryEditorModeSwitcher
           mode={mode}
-          onChange={(newMode) => {
+          onChange={async (newMode) => {
             if (newMode === EMode.RAW) {
               const rawSelector = datasource.buildRawQuery(state.filters);
               console.log('convert', state.filters, 'to', rawSelector);
@@ -44,7 +44,7 @@ export const QueryEditor: React.FC<Props> = (props: Props) => {
                 rawSelector,
               });
             } else {
-              const filters = datasource.buildFiltersQuery(state.rawSelector);
+              const filters = await datasource.buildFiltersQuery(state.rawSelector);
               console.log(`mode ${newMode} => convert`, state.rawSelector, 'to', filters);
 
               onChange({

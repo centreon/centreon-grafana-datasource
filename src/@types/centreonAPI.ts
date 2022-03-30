@@ -13,6 +13,12 @@ export interface Meta {
   total: number;
 }
 
+export interface MBIResourceType {
+  slug: string;
+  display_name: string;
+  list_endpoint: string;
+}
+
 export interface TimeSeriesMetric {
   id: number;
   name: string;
