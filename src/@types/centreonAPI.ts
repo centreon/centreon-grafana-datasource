@@ -25,3 +25,9 @@ export interface TimeSeriesMetric {
   unit: string;
   timeserie: Array<{ datetime: isoDateString; value: number }>;
 }
+
+export interface APIError {
+  message: string;
+  error: string;
+  response: string;
+}

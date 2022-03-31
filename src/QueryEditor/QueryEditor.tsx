@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { css } from '@emotion/css';
 import { QueryEditorProps } from '@grafana/data';
 import { CentreonDataSource } from '../centreonDataSource';
@@ -15,6 +15,7 @@ export const QueryEditor: React.FC<Props> = (props: Props) => {
   const { query, onRunQuery, onChange: pOnchange, datasource } = props;
   const state = defaults(query, defaultQuery);
 
+  const [loading, setLoading] = useState(false);
   const onRunQueryDebounced = useCallback(() => debounce(onRunQuery, 300)(), [onRunQuery]);
 
   const onChange = useCallback((value: MyQuery) => {
@@ -28,6 +29,12 @@ export const QueryEditor: React.FC<Props> = (props: Props) => {
   }, [query, onRunQueryDebounced]);
 
   const mode = state.mode ?? EMode.VISUAL;
+  const CurrentEditor =
+    mode === EMode.RAW ? (
+      <RawCentreonQueryEditor query={query} onChange={onChange} onRunQuery={onRunQuery} />
+    ) : (
+      <VisualCentreonEditor query={query} onChange={onChange} onRunQuery={onRunQuery} datasource={datasource} />
+    );
 
   return (
     <div>
@@ -37,16 +44,16 @@ export const QueryEditor: React.FC<Props> = (props: Props) => {
           onChange={async (newMode) => {
             if (newMode === EMode.RAW) {
               const rawSelector = datasource.buildRawQuery(state.filters);
-              console.log('convert', state.filters, 'to', rawSelector);
               onChange({
                 ...state,
                 mode: newMode,
                 rawSelector,
               });
             } else {
+              setLoading(true);
               const filters = await datasource.buildFiltersQuery(state.rawSelector);
-              console.log(`mode ${newMode} => convert`, state.rawSelector, 'to', filters);
 
+              setLoading(false);
               onChange({
                 ...state,
                 mode: newMode,
@@ -57,11 +64,7 @@ export const QueryEditor: React.FC<Props> = (props: Props) => {
         />
       </div>
       <div className={css({ flexGrow: 1, marginTop: '10px' })}>
-        {mode === EMode.RAW ? (
-          <RawCentreonQueryEditor query={query} onChange={onChange} onRunQuery={onRunQuery} />
-        ) : (
-          <VisualCentreonEditor query={query} onChange={onChange} onRunQuery={onRunQuery} datasource={datasource} />
-        )}
+        {loading ? 'converting raw to visual' : CurrentEditor}
       </div>
     </div>
   );

@@ -10,21 +10,30 @@ import {
   SelectableValue,
 } from '@grafana/data';
 import { FetchError, getBackendSrv, getTemplateSrv } from '@grafana/runtime';
-import { catchError, lastValueFrom } from 'rxjs';
+import { catchError, lastValueFrom, Observable } from 'rxjs';
 
-import { CentreonLoginResult, CentreonMetricOptions, defaultQuery, EAccess, ERoutes, MyQuery } from './@types/types';
+import {
+  CentreonLoginResult,
+  CentreonMetricOptions,
+  defaultQuery,
+  EAccess,
+  ERoutes,
+  MyQuery,
+  strOrArrStr,
+} from './@types/types';
 import { BackendSrvRequest, FetchResponse } from '@grafana/runtime/services/backendSrv';
-import { CentreonList, TimeSeriesMetric, MBIResourceType } from './@types/centreonAPI';
+import { APIError, CentreonList, MBIResourceType, TimeSeriesMetric } from './@types/centreonAPI';
 import { SavedFilter } from './@types/SavedFilter';
 import { defaults } from 'lodash';
 
 export class CentreonDataSource extends DataSourceApi<MyQuery, CentreonMetricOptions> {
-  private readonly centreonURL: string;
+  private readonly APIUrl: string;
   private readonly access: EAccess;
   private readonly url: string;
   private token?: string;
   private readonly password?: string;
   private readonly username: string;
+  private readonly centreonURL: string;
 
   constructor(instanceSettings: DataSourceInstanceSettings<CentreonMetricOptions>) {
     super(instanceSettings);
@@ -45,7 +54,8 @@ export class CentreonDataSource extends DataSourceApi<MyQuery, CentreonMetricOpt
     if (centreonURL.slice(-1) === '/') {
       centreonURL = centreonURL.slice(0, -1);
     }
-    this.centreonURL = centreonURL + '/api/latest';
+    this.centreonURL = centreonURL;
+    this.APIUrl = this.centreonURL + '/api/latest';
     this.access = access;
     this.username = username;
     this.password = password;
@@ -53,7 +63,7 @@ export class CentreonDataSource extends DataSourceApi<MyQuery, CentreonMetricOpt
 
   private getUrl(): string {
     if (this.access === EAccess.BROWSER) {
-      return this.centreonURL;
+      return this.APIUrl;
     } else {
       return this.url + ERoutes.API;
     }
@@ -66,7 +76,7 @@ export class CentreonDataSource extends DataSourceApi<MyQuery, CentreonMetricOpt
       // access === EAccess.PROXY && this.password is not normal here . Except if you try to configure the datasource
       const useProxy = this.access === EAccess.PROXY && !this.password;
 
-      let url = useProxy ? this.url + ERoutes.LOGIN : this.centreonURL + '/login';
+      let url = useProxy ? this.url + ERoutes.LOGIN : this.APIUrl + '/login';
       if (!useProxy) {
         data = {
           security: {
@@ -88,14 +98,14 @@ export class CentreonDataSource extends DataSourceApi<MyQuery, CentreonMetricOpt
         throw new Error('Bad credentials');
       }
 
-      throw new Error('Error access Centreon instance');
+      throw new Error(`Error accessing Centreon instance, it is up and running at ${this.centreonURL} ?`);
     }
   }
 
-  private async call<T>(
+  private async _call<T>(
     request: BackendSrvRequest,
     opts: Partial<{ authentication: boolean; retry: boolean }> = {}
-  ): Promise<FetchResponse<T>> {
+  ): Promise<Observable<FetchResponse<T>>> {
     let authHeaders: Record<string, string> = {};
     if (!opts.authentication) {
       if (!this.token) {
@@ -106,7 +116,7 @@ export class CentreonDataSource extends DataSourceApi<MyQuery, CentreonMetricOpt
       authHeaders['X-AUTH-TOKEN'] = this.token!;
     }
 
-    const reqObs = getBackendSrv().fetch<T>({
+    return getBackendSrv().fetch<T>({
       ...request,
       url: request.url.slice(0, 1) === '/' ? this.getUrl() + request.url : request.url,
       headers: {
@@ -114,36 +124,37 @@ export class CentreonDataSource extends DataSourceApi<MyQuery, CentreonMetricOpt
         ...request.headers,
       },
     });
+  }
 
-    //if crash, retry
-    const res = reqObs.pipe(
-      catchError(async (err) => {
-        if (opts.retry) {
-          if ((err as FetchError<{ message: string }>).data?.message) {
-            const fetchError: FetchError<{
-              message: string;
-              error: string;
-              response: string;
-            }> = err;
-            throw new Error(`${fetchError.data?.error} : ${fetchError.data?.message}`);
+  private async call<T>(
+    request: BackendSrvRequest,
+    opts: Partial<{ authentication: boolean; retry: boolean }> = {}
+  ): Promise<FetchResponse<T>> {
+    return lastValueFrom(
+      (await this._call<T>(request, opts)).pipe(
+        //if crash, retry
+        catchError(async (err) => {
+          if (opts.retry === false) {
+            if ((err as FetchError<APIError>).data?.message) {
+              const fetchError: FetchError<APIError> = err;
+              throw new Error(`${fetchError.data?.error} : ${fetchError.data?.message}`);
+            }
+
+            throw err;
+          } else {
+            await this.authenticate();
+            return this.call<T>(request, { retry: false });
           }
-
-          throw err;
-        } else {
-          await this.authenticate();
-          return this.call<T>(request, { retry: true });
-        }
-      })
+        })
+      )
     );
-
-    return lastValueFrom(res);
   }
 
   async testDatasource() {
     if (!this.username) {
       throw new Error('field Username is mandatory');
     }
-    if (!this.centreonURL) {
+    if (!this.APIUrl) {
       throw new Error('field centreonURL is mandatory');
     }
     if (this.access === EAccess.BROWSER && !this.password) {
@@ -152,6 +163,46 @@ export class CentreonDataSource extends DataSourceApi<MyQuery, CentreonMetricOpt
 
     const username = await this.authenticate();
     // Implement a health check for your data source.
+
+    //check if plugin is enabled
+    await new Promise<void>(async (resolve, reject) => {
+      try {
+        const res = await lastValueFrom(
+          (
+            await this._call<MBIResourceType[]>(
+              {
+                url: '/data-source/types',
+              },
+              { retry: false }
+            )
+          ).pipe(
+            catchError(async (err) => {
+              console.error(err);
+              switch ((err as FetchError<APIError>)?.status) {
+                case 400:
+                  throw new Error('Unknown error when contacting the Centreon API');
+                case 401:
+                  throw new Error('This user is not authorized to use this API');
+                case 402:
+                  throw new Error("The module doesn't have a valid license");
+                case 403:
+                  throw new Error("The user doesn't have the rights, please validate the ACL on Centreon.");
+                case 500:
+                default:
+                  throw new Error('Fail to use MBI API. Did you install the MBI extension ?');
+              }
+            })
+          )
+        );
+
+        console.log(res);
+
+        resolve();
+      } catch (e) {
+        reject(e);
+      }
+    });
+
     return {
       status: 'success',
       message: `Connected with user ${username}`,
@@ -195,10 +246,10 @@ export class CentreonDataSource extends DataSourceApi<MyQuery, CentreonMetricOpt
         try {
           //call centreon timeSeries + build DataFrame (one per metric . One call can return multiple metrics)
           (
-            await this.call<CentreonList<TimeSeriesMetric>>({
+            await this.call<TimeSeriesMetric[]>({
               url: `/data-source/metrics/timeseries?${searchParams}`,
             })
-          ).data.result.forEach((metric) => {
+          ).data.forEach((metric) => {
             data.push(
               new MutableDataFrame({
                 refId: query.refId,
@@ -212,6 +263,9 @@ export class CentreonDataSource extends DataSourceApi<MyQuery, CentreonMetricOpt
                     name: metric.name,
                     type: FieldType.number,
                     values: metric.timeserie.map((element) => element.value),
+                    config: {
+                      unit: metric.unit,
+                    },
                   },
                 ],
               })
@@ -263,9 +317,7 @@ export class CentreonDataSource extends DataSourceApi<MyQuery, CentreonMetricOpt
     return standardsFilters;
   }
 
-  private convertRecordOfStringsFilterToMap(
-    params?: Record<string, undefined | string | Array<undefined | string>>
-  ): Map<string, string[]> {
+  private convertRecordOfStringsFilterToMap(params?: Record<string, strOrArrStr>): Map<string, string[]> {
     const standardsFilters: Map<string, string[]> = new Map<string, string[]>();
 
     if (!params) {
@@ -372,7 +424,7 @@ export class CentreonDataSource extends DataSourceApi<MyQuery, CentreonMetricOpt
   buildRawQuery(filters?: SavedFilter[]): string {
     return (filters || [])
       .filter((value) => value.type && value.filters.length > 0)
-      .map((value) => `${value.type.value}="${value.filters.map((f) => f.value).join('","')}"`)
+      .map((value) => `${value.type.value?.slug}="${value.filters.map((f) => f.value).join('","')}"`)
       .join(' ');
   }
 

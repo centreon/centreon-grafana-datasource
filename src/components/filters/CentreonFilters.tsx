@@ -49,7 +49,7 @@ export const CentreonFilters = ({
         const query = {
           //prepare query object from all types
           ...Object.fromEntries(
-            (filters || []).map((filter) => [filter.type.value, filter.filters.map((f) => f.value)])
+            (filters || []).map((filter) => [filter.type.value?.slug, filter.filters.map((f) => f.value)])
           ),
         };
 

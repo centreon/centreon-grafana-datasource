@@ -58,3 +58,5 @@ export interface CentreonLoginResult {
 export type tFilter = SavedFilter & { type: SelectableValue<string> & { valid?: boolean } };
 
 export type TypeFilter = SelectableValue<MBIResourceType>;
+
+export type strOrArrStr = undefined | string | Array<undefined | string>;
