@@ -103,7 +103,7 @@ export const ConfigEditor = (props: Props) => {
         </InlineField>
         <InlineField
           label="Access Mode"
-          tooltip="The way Grafana call your Centreon instance. Changing it will reset username/password"
+          tooltip="The way Grafana call your Centreon instance. Changing it will reset the saved password"
           labelWidth={20}
           grow={false}
         >

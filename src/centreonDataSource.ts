@@ -257,12 +257,14 @@ export class CentreonDataSource extends DataSourceApi<MyQuery, CentreonMetricOpt
                   {
                     type: FieldType.time,
                     name: `${metric.name}.time`,
-                    values: metric.timeserie.map((element) => new Date(element.datetime)),
+                    values: metric.timeserie
+                      .filter((e) => e.value !== null)
+                      .map((element) => new Date(element.datetime)),
                   },
                   {
                     name: metric.name,
                     type: FieldType.number,
-                    values: metric.timeserie.map((element) => element.value),
+                    values: metric.timeserie.filter((e) => e.value !== null).map((element) => element.value),
                     config: {
                       unit: metric.unit,
                     },
