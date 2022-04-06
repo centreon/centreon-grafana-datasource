@@ -49,7 +49,6 @@ router.post('/login', (req, res) => {
   const token = Date.now() + 30 * 60 * 1000;
 
   if (body?.security?.credentials?.password === 'centreon') {
-    // token valid 30 minutes to test
     res.send({
       contact: {
         id: 123,
