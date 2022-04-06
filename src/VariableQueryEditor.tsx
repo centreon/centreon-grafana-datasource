@@ -21,7 +21,6 @@ export const VariableQueryEditor: React.FC<
   useEffect(() => {
     (async () => {
       try {
-        //load resources types
         const resourcesOptions = await props.datasource.getResourceList();
         setResources({
           __types: resourcesOptions,

@@ -21,7 +21,6 @@ export const VisualCentreonEditor = ({ onChange, datasource, query }: Props) => 
   useEffect(() => {
     (async () => {
       try {
-        //load resources types
         const resourcesOptions = await datasource.getResourceList();
 
         setResources({
