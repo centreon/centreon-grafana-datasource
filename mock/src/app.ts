@@ -195,12 +195,11 @@ dataSourceRouter.get('/metrics/timeseries', ensureAuthenticated, (req, res) => {
   const from = new Date(req.query.start?.toString() || Date.now() - 3 * 60 * 60 * 1000);
   const to = new Date(req.query.end?.toString() || Date.now());
 
-  let returnMetrics: string[];
-  if (metrics) {
-    returnMetrics = Array.isArray(metrics) ? metrics.map((m) => m.toString()) : [metrics.toString()];
-  } else {
-    returnMetrics = metricsSample;
-  }
+  let returnMetrics = metrics
+    ? Array.isArray(metrics)
+      ? metrics.map((m) => m.toString())
+      : [metrics.toString()]
+    : metricsSample;
 
   const result = [...new Array(getRandomArbitrary(1, returnMetrics.length))].map((_, i) => {
     const name = returnMetrics[i % returnMetrics.length];
