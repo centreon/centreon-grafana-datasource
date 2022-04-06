@@ -25,36 +25,4 @@ export const QueryEditorModeSwitcher = ({ mode, onChange }: Props): JSX.Element 
       onChange={onChange}
     />
   );
-
-  // if (mode === EMode.RAW) {
-  //   return (
-  //     <>
-  {
-    /*      <Button*/
-  }
-  //         aria-label="Switch to visual editor"
-  //         title="Switch to visual editor"
-  //         icon="pen"
-  //         variant="secondary"
-  //         type="button"
-  //         onClick={() => {
-  //           onChange(EMode.VISUAL);
-  //         }}
-  //       ></Button>
-  //     </>
-  //   );
-  // } else {
-  //   return (
-  //     <Button
-  //       aria-label="Switch to text editor"
-  //       title="Switch to text editor"
-  //       icon="pen"
-  //       variant="secondary"
-  //       type="button"
-  //       onClick={() => {
-  //         onChange(EMode.RAW);
-  //       }}
-  //     ></Button>
-  //   );
-  // }
 };

@@ -38,7 +38,9 @@ export const VariableQueryEditor: React.FC<
   useEffect(() => {
     onChange({
       ...state,
-      filters: filters.filter(({ filters: cFilters, type }) => !!cFilters?.find((f) => f.value) && !!type.value),
+      filters: filters.filter(
+        ({ filters: currentFilters, type }) => !!currentFilters?.find((f) => f.value) && !!type.value
+      ),
       resourceType: state.resourceType,
     });
   }, [onChange, props.datasource, filters, state]);

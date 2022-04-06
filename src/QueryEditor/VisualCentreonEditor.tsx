@@ -52,7 +52,7 @@ export const VisualCentreonEditor = ({ onChange, datasource, query }: Props) => 
       customFilters[type.slug].push({ label: `$${v.name}`, value: `$${v.name}` });
     });
 
-  const filtersChange = useCallback(
+  const changeFilters = useCallback(
     (filters: SavedFilter[]) => {
       onChange({ ...query, filters });
     },
@@ -64,7 +64,7 @@ export const VisualCentreonEditor = ({ onChange, datasource, query }: Props) => 
   return (
     <CentreonFilters
       filters={query.filters}
-      onChange={filtersChange}
+      onChange={changeFilters}
       forceBottom={true}
       datasource={datasource}
       types={resources.__types}

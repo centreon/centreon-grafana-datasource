@@ -67,7 +67,6 @@ export const Filter = ({
           }
           onChange={setType}
           loadingMessage="loading"
-          // invalid={!type.valid}
           isLoading={typesLoading}
           width={50}
         />

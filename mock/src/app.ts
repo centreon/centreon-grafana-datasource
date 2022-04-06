@@ -1,3 +1,7 @@
+/**
+ * MOCK ONLY USED WHEN MBI API IS NOT AVAILABLE
+ * TO SIMULATE API ANSWER
+ */
 import express, { Router } from 'express';
 import cors from 'cors';
 import { MBIResourceType } from '../../src/@types/centreonAPI';
@@ -33,13 +37,16 @@ function ensureAuthenticated(req: express.Request, res: express.Response, next: 
   const token = req.header('X-AUTH-TOKEN');
   if (token && Number(token) > Date.now()) {
     return next();
-  } else {
-    res.status(401).send('UNAUTHORIZED');
   }
+  res.status(401).send('UNAUTHORIZED');
 }
 
 router.post('/login', (req, res) => {
   const { body } = req;
+
+  //fake token will be a timestamp, and so will expire when the timestamp is past
+  // 30 * 60 * 1000 = 30m
+  const token = Date.now() + 30 * 60 * 1000;
 
   if (body?.security?.credentials?.password === 'centreon') {
     // token valid 30 minutes to test
@@ -52,7 +59,7 @@ router.post('/login', (req, res) => {
         is_admin: false,
       },
       security: {
-        token: Date.now() + 30 * 60 * 1000,
+        token,
       },
     });
   } else {
@@ -94,7 +101,7 @@ dataSourceRouter.get('/types', ensureAuthenticated, (req, res) => {
   res.send(resourcesTypes);
 });
 
-const typeRet: Record<string, Array<{ name: string; [key: string]: string }>> = {
+const resourcesTypesExamples: Record<string, Array<{ name: string; [key: string]: string }>> = {
   host: [
     {
       name: 'Centreon-central',
@@ -152,14 +159,15 @@ const createEndpoint = ({ list_endpoint, slug }: MBIResourceType) => {
   dataSourceRouter.get(`/${list_endpoint.split('/').pop()}`, ensureAuthenticated, (req: express.Request, res) => {
     const name = req.query[slug]?.toString()?.replace('*', '') || '';
 
-    const retTypes = typeRet[slug] || [];
+    const resourcesTypesCorrespondingToRequest = resourcesTypesExamples[slug] || [];
     const result = [...new Array(getRandomArbitrary(1, 15))].map(() => {
       const id = getRandomArbitrary(1, 1500);
-      const randRet = retTypes[Math.floor(Math.random() * retTypes.length)];
+      const randomResource =
+        resourcesTypesCorrespondingToRequest[Math.floor(Math.random() * resourcesTypesCorrespondingToRequest.length)];
       return {
-        ...randRet,
+        ...randomResource,
         id,
-        name: `${name ? name + '-' : ''}${randRet.name}-${id}`,
+        name: `${name ? name + '-' : ''}${randomResource.name}-${id}`,
       };
     });
 
@@ -184,11 +192,9 @@ const metricsSample = ['response_time', 'load5', 'load10', 'load15'];
 
 dataSourceRouter.get('/metrics/timeseries', ensureAuthenticated, (req, res) => {
   const { metrics } = req.query;
-  console.log(metrics);
 
   const from = new Date(req.query.start?.toString() || Date.now() - 3 * 60 * 60 * 1000);
   const to = new Date(req.query.end?.toString() || Date.now());
-  // const step = 5 * 1000;
 
   let returnMetrics: string[];
   if (metrics) {

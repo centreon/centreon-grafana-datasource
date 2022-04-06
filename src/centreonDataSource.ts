@@ -19,7 +19,7 @@ import {
   EAccess,
   ERoutes,
   MyQuery,
-  strOrArrStr,
+  StringOrArrayOfStrings,
 } from './@types/types';
 import { BackendSrvRequest, FetchResponse } from '@grafana/runtime/services/backendSrv';
 import { APIError, CentreonList, MBIResourceType, TimeSeriesMetric } from './@types/centreonAPI';
@@ -319,7 +319,7 @@ export class CentreonDataSource extends DataSourceApi<MyQuery, CentreonMetricOpt
     return standardsFilters;
   }
 
-  private convertRecordOfStringsFilterToMap(params?: Record<string, strOrArrStr>): Map<string, string[]> {
+  private convertRecordOfStringsFilterToMap(params?: Record<string, StringOrArrayOfStrings>): Map<string, string[]> {
     const standardsFilters: Map<string, string[]> = new Map<string, string[]>();
 
     if (!params) {
@@ -436,10 +436,6 @@ export class CentreonDataSource extends DataSourceApi<MyQuery, CentreonMetricOpt
     return (rawSelector || '')
       ?.split(' ')
       .filter((v) => !!v)
-      .map((v) => {
-        console.log(/[=,](?:"([^"]*(?:""[^"]*)*)"|([^",\r\n]*))/gi.exec(v));
-        return v;
-      })
       .map((group) => group.split('='))
       .map(([type, filters]) => {
         const currentType: SelectableValue<MBIResourceType> | undefined = types.find((t) => t.value?.slug === type);
