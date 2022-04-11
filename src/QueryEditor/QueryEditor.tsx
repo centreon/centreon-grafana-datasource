@@ -1,22 +1,32 @@
 import React, { useCallback, useEffect, useState } from 'react';
+
 import { css } from '@emotion/css';
 import { QueryEditorProps } from '@grafana/data';
+import { debounce, defaults } from 'lodash';
+
 import { CentreonDataSource } from '../centreonDataSource';
 import { CentreonMetricOptions, defaultQuery, MyQuery } from '../@types/types';
-import { debounce, defaults } from 'lodash';
+
 import { QueryEditorModeSwitcher } from './QueryEditorModeSwitcher';
 import { EMode } from './EMode';
 import { VisualCentreonEditor } from './VisualCentreonEditor';
 import { RawCentreonQueryEditor } from './RawCentreonQueryEditor';
 
-type Props = QueryEditorProps<CentreonDataSource, MyQuery, CentreonMetricOptions>;
+type Props = QueryEditorProps<
+  CentreonDataSource,
+  MyQuery,
+  CentreonMetricOptions
+>;
 
 export const QueryEditor: React.FC<Props> = (props: Props) => {
   const { query, onRunQuery, onChange: parentOnchange, datasource } = props;
   const state = defaults(query, defaultQuery);
 
   const [loading, setLoading] = useState(false);
-  const onRunQueryDebounced = useCallback(() => debounce(onRunQuery, 300)(), [onRunQuery]);
+  const onRunQueryDebounced = useCallback(
+    () => debounce(onRunQuery, 300)(),
+    [onRunQuery],
+  );
 
   const onChange = useCallback((value: MyQuery) => {
     parentOnchange(value);
@@ -24,14 +34,10 @@ export const QueryEditor: React.FC<Props> = (props: Props) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => {
-    onRunQueryDebounced();
-  }, [query, onRunQueryDebounced]);
-
   const onModeChange = useCallback(
     async (newMode: EMode) => {
       if (newMode === EMode.RAW) {
-        const rawSelector = datasource.buildRawQuery(state.filters);
+        const rawSelector = CentreonDataSource.buildRawQuery(state.filters);
         onChange({
           ...state,
           mode: newMode,
@@ -44,20 +50,32 @@ export const QueryEditor: React.FC<Props> = (props: Props) => {
         setLoading(false);
         onChange({
           ...state,
-          mode: newMode,
           filters,
+          mode: newMode,
         });
       }
     },
-    [datasource, onChange, setLoading, state]
+    [datasource, onChange, setLoading, state],
   );
+
+  useEffect(() => {
+    onRunQueryDebounced();
+  }, [query, onRunQueryDebounced]);
 
   const mode = state.mode ?? EMode.VISUAL;
   const currentEditor =
     mode === EMode.RAW ? (
-      <RawCentreonQueryEditor query={query} onChange={onChange} onRunQuery={onRunQuery} />
+      <RawCentreonQueryEditor
+        query={query}
+        onChange={onChange}
+        onRunQuery={onRunQuery}
+      />
     ) : (
-      <VisualCentreonEditor query={query} onChange={onChange} onRunQuery={onRunQuery} datasource={datasource} />
+      <VisualCentreonEditor
+        datasource={datasource}
+        query={query}
+        onChange={onChange}
+      />
     );
 
   return (

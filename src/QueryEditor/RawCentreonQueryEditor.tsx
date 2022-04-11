@@ -1,17 +1,25 @@
 import React, { useState } from 'react';
-import { MyQuery } from '../@types/types';
+
 import { TextArea } from '@grafana/ui';
 
-type Props = {
-  query: MyQuery;
+import { MyQuery } from '../@types/types';
+
+interface Props {
   onChange: (query: MyQuery) => void;
   onRunQuery: () => void;
-};
+  query: MyQuery;
+}
 
-export const RawCentreonQueryEditor = ({ onChange, onRunQuery, query }: Props) => {
-  const [currentQuery, setCurrentQuery] = useState<string>(query.rawSelector || '');
+export const RawCentreonQueryEditor = ({
+  onChange,
+  onRunQuery,
+  query,
+}: Props): JSX.Element => {
+  const [currentQuery, setCurrentQuery] = useState<string>(
+    query.rawSelector || '',
+  );
 
-  const applyDelayedChangesAndRunQuery = () => {
+  const applyDelayedChangesAndRunQuery = (): void => {
     onChange({
       ...query,
       rawSelector: currentQuery,
@@ -22,14 +30,14 @@ export const RawCentreonQueryEditor = ({ onChange, onRunQuery, query }: Props) =
   return (
     <TextArea
       aria-label="query"
+      placeholder="Centreon filters"
       rows={3}
       spellCheck={false}
-      placeholder="Centreon filters"
+      value={currentQuery ?? ''}
       onBlur={applyDelayedChangesAndRunQuery}
-      onChange={(e) => {
+      onChange={(e): void => {
         setCurrentQuery(e.currentTarget.value);
       }}
-      value={currentQuery ?? ''}
     />
   );
 };

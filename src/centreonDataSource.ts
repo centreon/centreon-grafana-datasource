@@ -11,6 +11,11 @@ import {
 } from '@grafana/data';
 import { FetchError, getBackendSrv, getTemplateSrv } from '@grafana/runtime';
 import { catchError, lastValueFrom, Observable } from 'rxjs';
+import type {
+  BackendSrvRequest,
+  FetchResponse,
+} from '@grafana/runtime/services/backendSrv';
+import { defaults } from 'lodash';
 
 import {
   CentreonLoginResult,
@@ -21,27 +26,42 @@ import {
   MyQuery,
   StringOrArrayOfStrings,
 } from './@types/types';
-import { BackendSrvRequest, FetchResponse } from '@grafana/runtime/services/backendSrv';
-import { APIError, CentreonList, MBIResourceType, TimeSeriesMetric } from './@types/centreonAPI';
+import {
+  APIError,
+  ApiErrorOrGrafanaProxyError,
+  CentreonList,
+  GrafanaProxyError,
+  MBIResourceType,
+  TimeSeriesMetric,
+} from './@types/centreonAPI';
 import { SavedFilter } from './@types/SavedFilter';
-import { defaults } from 'lodash';
 
-export class CentreonDataSource extends DataSourceApi<MyQuery, CentreonMetricOptions> {
+export class CentreonDataSource extends DataSourceApi<
+  MyQuery,
+  CentreonMetricOptions
+> {
   private readonly APIUrl: string;
+
   private readonly access: EAccess;
+
   private readonly url: string;
+
   private token?: string;
+
   private readonly password?: string;
+
   private readonly username: string;
+
   private readonly centreonURL: string;
 
-  constructor(instanceSettings: DataSourceInstanceSettings<CentreonMetricOptions>) {
+  public constructor(
+    instanceSettings: DataSourceInstanceSettings<CentreonMetricOptions>,
+  ) {
     super(instanceSettings);
 
     let { centreonURL } = instanceSettings.jsonData;
     const { access, username, password } = instanceSettings.jsonData;
 
-    //TODO when this can be undefined ?
     if (!instanceSettings.url) {
       throw new Error('instanceSettings.url is undefined !');
     }
@@ -55,7 +75,7 @@ export class CentreonDataSource extends DataSourceApi<MyQuery, CentreonMetricOpt
       centreonURL = centreonURL.slice(0, -1);
     }
     this.centreonURL = centreonURL;
-    this.APIUrl = this.centreonURL + '/api/latest';
+    this.APIUrl = `${this.centreonURL}/api/latest`;
     this.access = access;
     this.username = username;
     this.password = password;
@@ -64,25 +84,27 @@ export class CentreonDataSource extends DataSourceApi<MyQuery, CentreonMetricOpt
   private getUrl(): string {
     if (this.access === EAccess.BROWSER) {
       return this.APIUrl;
-    } else {
-      return this.url + ERoutes.API;
     }
+
+    return this.url + ERoutes.API;
   }
 
-  async authenticate() {
+  public async authenticate(): Promise<string> {
     try {
-      let data: { security: { credentials: { login: string; password: string } } } | undefined;
+      let data:
+        | { security: { credentials: { login: string; password: string } } }
+        | undefined;
 
       // access === EAccess.PROXY && this.password is not normal here . Except if you try to configure the datasource
       const useProxy = this.access === EAccess.PROXY && !this.password;
 
-      let url = useProxy ? this.url + ERoutes.LOGIN : this.APIUrl + '/login';
-      if (!useProxy) {
+      const url = useProxy ? this.url + ERoutes.LOGIN : `${this.APIUrl}/login`;
+      if (!useProxy && this.password) {
         data = {
           security: {
             credentials: {
               login: this.username,
-              password: this.password!,
+              password: this.password,
             },
           },
         };
@@ -94,63 +116,135 @@ export class CentreonDataSource extends DataSourceApi<MyQuery, CentreonMetricOpt
       return result.contact.alias;
     } catch (err) {
       console.error(err);
-      if ((err as { status: number } | undefined)?.status === 401) {
-        throw new Error('Bad credentials');
+      if ((err as { status: number } | undefined)?.status) {
+        const status = (err as { status: number } | undefined)?.status;
+
+        if (status === 401) {
+          throw new Error('Bad credentials');
+        }
       }
 
-      throw new Error(`Error accessing Centreon instance, it is up and running at ${this.centreonURL} ?`);
+      this.manageHTTPError(err);
+      // manageHTTPError need to throw before this
+      console.error(err);
+      throw new Error(`Unknown error`);
     }
   }
 
-  private async _call<T>(
+  /**
+   * will try to manageHTTPError
+   * Throw exception if succeed
+   */
+  private manageHTTPError(
+    err: FetchError<ApiErrorOrGrafanaProxyError> | any,
+  ): void {
+    const { status, data, statusText } = err;
+
+    enum Errors {
+      API_NOT_FOUND = 'Fail to call the API, did you install the MBI extension ?',
+      BAD_REQUEST = 'Unknown error when contacting the Centreon API',
+      LICENSE_REQUIRED = "The module doesn't have a valid license",
+      NO_RIGHTS = "The user doesn't have the rights, please validate the ACL on Centreon.",
+      UNAUTHORIZED = 'This user is not authorized to use this API',
+      SERVER_ERROR = 'Fail to use MBI API. Did you install the MBI extension ?',
+      DEFAULT = `Error accessing Centreon instance, it is up and running at {{centreonURL}} ?`,
+    }
+
+    if ((data as APIError).code !== undefined) {
+      const apiErr = data as APIError;
+
+      if (apiErr.message?.toLowerCase().startsWith('no route found')) {
+        throw new Error(Errors.API_NOT_FOUND);
+      }
+
+      switch (status) {
+        case 400:
+          throw new Error(Errors.BAD_REQUEST);
+        case 401:
+          throw new Error(Errors.LICENSE_REQUIRED);
+        case 402:
+          throw new Error(Errors.NO_RIGHTS);
+        case 403:
+          throw new Error(Errors.UNAUTHORIZED);
+        case 500:
+        default:
+          if (apiErr.message) {
+            throw new Error(`Centreon return an error ${apiErr.message}`);
+          }
+          if (status === 500) {
+            throw new Error(Errors.SERVER_ERROR);
+          }
+          throw new Error(
+            Errors.DEFAULT.replace('{{centreonURL}}', this.centreonURL),
+          );
+      }
+    } else if ((data as GrafanaProxyError).error !== undefined) {
+      const proxyErr = data as GrafanaProxyError;
+      throw new Error(`${proxyErr?.error} : ${proxyErr?.message}`);
+    } else if (statusText) {
+      throw new Error(`Unknown error ${statusText}`);
+    }
+    // eslint-disable-next-line no-console
+    console.log('manageHTTPError', err);
+  }
+
+  private async privateCall<T>(
     request: BackendSrvRequest,
-    opts: Partial<{ authentication: boolean; retry: boolean }> = {}
+    opts: Partial<{ authentication: boolean; retry: boolean }> = {},
   ): Promise<Observable<FetchResponse<T>>> {
-    let authHeaders: Record<string, string> = {};
+    const authHeaders: Record<string, string> = {};
     if (!opts.authentication) {
       if (!this.token) {
         await this.authenticate();
       }
 
-      //this.authenticate populate this.token or throw an error
-      authHeaders['X-AUTH-TOKEN'] = this.token!;
+      // this.authenticate populate this.token or throw an error => this condition is only here for the linter
+      if (!this.token) {
+        throw new Error('something is wrong');
+      }
+
+      authHeaders['X-AUTH-TOKEN'] = this.token;
     }
 
     return getBackendSrv().fetch<T>({
       ...request,
-      url: request.url.slice(0, 1) === '/' ? this.getUrl() + request.url : request.url,
       headers: {
         ...authHeaders,
         ...request.headers,
       },
+      url:
+        request.url.slice(0, 1) === '/'
+          ? this.getUrl() + request.url
+          : request.url,
     });
   }
 
   private async call<T>(
     request: BackendSrvRequest,
-    opts: Partial<{ authentication: boolean; retry: boolean }> = {}
+    opts: Partial<{ authentication: boolean; retry: boolean }> = {},
   ): Promise<FetchResponse<T>> {
     return lastValueFrom(
-      (await this._call<T>(request, opts)).pipe(
-        //if crash, retry
+      (await this.privateCall<T>(request, opts)).pipe(
+        // if crash, retry
         catchError(async (err) => {
           if (opts.retry === false) {
-            if ((err as FetchError<APIError>).data?.message) {
-              const fetchError: FetchError<APIError> = err;
-              throw new Error(`${fetchError.data?.error} : ${fetchError.data?.message}`);
-            }
+            this.manageHTTPError(err);
 
             throw err;
           } else {
             await this.authenticate();
+
             return this.call<T>(request, { retry: false });
           }
-        })
-      )
+        }),
+      ),
     );
   }
 
-  async testDatasource() {
+  public async testDatasource(): Promise<{
+    message: string;
+    status: string;
+  }> {
     if (!this.username) {
       throw new Error('field Username is mandatory');
     }
@@ -162,165 +256,166 @@ export class CentreonDataSource extends DataSourceApi<MyQuery, CentreonMetricOpt
     }
 
     const username = await this.authenticate();
-    // Implement a health check for your data source.
 
-    //check if plugin is enabled
-    await new Promise<void>(async (resolve, reject) => {
-      try {
-        const res = await lastValueFrom(
-          (
-            await this._call<MBIResourceType[]>(
-              {
-                url: '/data-source/types',
-              },
-              { retry: false }
-            )
-          ).pipe(
-            catchError(async (err) => {
-              console.error(err);
-              switch ((err as FetchError<APIError>)?.status) {
-                case 400:
-                  throw new Error('Unknown error when contacting the Centreon API');
-                case 401:
-                  throw new Error('This user is not authorized to use this API');
-                case 402:
-                  throw new Error("The module doesn't have a valid license");
-                case 403:
-                  throw new Error("The user doesn't have the rights, please validate the ACL on Centreon.");
-                case 500:
-                default:
-                  throw new Error('Fail to use MBI API. Did you install the MBI extension ?');
-              }
-            })
-          )
-        );
-
-        console.log(res);
-
-        resolve();
-      } catch (e) {
-        reject(e);
-      }
-    });
+    // check if plugin is enabled
+    await lastValueFrom(
+      (
+        await this.privateCall<Array<MBIResourceType>>(
+          {
+            url: '/data-source/types',
+          },
+          { retry: false },
+        )
+      ).pipe(
+        catchError(async (err) => {
+          this.manageHTTPError(err);
+        }),
+      ),
+    );
 
     return {
-      status: 'success',
       message: `Connected with user ${username}`,
+      status: 'success',
     };
   }
 
-  async metricFindQuery(query: MyQuery, options?: any): Promise<MetricFindValue[]> {
+  public async metricFindQuery(
+    query: MyQuery,
+  ): Promise<Array<MetricFindValue>> {
     const { resourceType, filters } = query;
 
     if (!resourceType?.value) {
       return [];
     }
 
-    const filtersPart = (filters || [])
-      .map((value) => `${value.type.value?.slug}=${value.filters.map((f) => f.value).join(',')}`)
-      .join(' ');
-    console.log(`need to query resource "${resourceType?.value.slug}" with filters : ${filtersPart}`);
-
-    return (await this.getResources(resourceType.value, filters)).map(({ label, value }) => ({
-      text: label,
-      value,
-      expandable: false,
-    }));
+    return (await this.getResources(resourceType.value, filters)).map(
+      ({ label, value }) => ({
+        expandable: false,
+        text: label,
+        value,
+      }),
+    );
   }
 
-  async query(options: DataQueryRequest<MyQuery>): Promise<DataQueryResponse> {
+  public async query(
+    options: DataQueryRequest<MyQuery>,
+  ): Promise<DataQueryResponse> {
     const { range } = options;
     const from = range.from.toISOString();
     const to = range.to.toISOString();
 
-    const data: MutableDataFrame[] = [];
+    const data: Array<MutableDataFrame> = [];
 
     await Promise.all(
       options.targets.map(async (target) => {
         const query = defaults(target, defaultQuery);
 
-        const searchParams = this.generateUrlSearchParamsFilters(query.filters, options.scopedVars);
+        const searchParams = CentreonDataSource.generateUrlSearchParamsFilters(
+          query.filters,
+          options.scopedVars,
+        );
 
         searchParams.append('end', to.toString());
         searchParams.append('start', from.toString());
         try {
-          //call centreon timeSeries + build DataFrame (one per metric . One call can return multiple metrics)
+          // call centreon timeSeries + build DataFrame (one per metric . One call can return multiple metrics)
           (
-            await this.call<TimeSeriesMetric[]>({
+            await this.call<Array<TimeSeriesMetric>>({
               url: `/data-source/metrics/timeseries?${searchParams}`,
             })
           ).data.forEach((metric) => {
             data.push(
               new MutableDataFrame({
-                refId: query.refId,
                 fields: [
                   {
-                    type: FieldType.time,
                     name: `${metric.name}.time`,
+                    type: FieldType.time,
                     values: metric.timeserie
                       .filter((e) => e.value !== null)
                       .map((element) => new Date(element.datetime)),
                   },
                   {
-                    name: metric.name,
-                    type: FieldType.number,
-                    values: metric.timeserie.filter((e) => e.value !== null).map((element) => element.value),
                     config: {
                       unit: metric.unit,
                     },
+                    name: metric.name,
+                    type: FieldType.number,
+                    values: metric.timeserie
+                      .filter((e) => e.value !== null)
+                      .map((element) => element.value),
                   },
                 ],
-              })
+                refId: query.refId,
+              }),
             );
           });
         } catch (e) {
           console.error(e);
           throw e;
         }
-      })
+      }),
     );
 
     return { data };
   }
 
-  async getResourceList(): Promise<Array<SelectableValue<MBIResourceType>>> {
+  public async getResourceList(): Promise<
+    Array<SelectableValue<MBIResourceType>>
+  > {
     return (
-      await this.call<MBIResourceType[]>({
+      await this.call<Array<MBIResourceType>>({
         url: '/data-source/types',
       })
     ).data.map((type) => ({
       label: type.display_name,
       value: {
         ...type,
-        //keep only the last part of the list_endpoint
+        // keep only the last part of the list_endpoint
         list_endpoint: type.list_endpoint.split('/').pop() || '',
       },
     }));
   }
 
-  private convertArrayOfSavedFilterToMap(params?: SavedFilter[]): Map<string, string[]> {
-    const standardsFilters: Map<string, string[]> = new Map<string, string[]>();
+  private static convertArrayOfSavedFilterToMap(
+    params?: Array<SavedFilter>,
+  ): Map<string, Array<string>> {
+    const standardsFilters: Map<string, Array<string>> = new Map<
+      string,
+      Array<string>
+    >();
 
     if (!params) {
       return standardsFilters;
     }
 
-    params
-      //check we have a type
-      .filter(({ type }) => !!type.value)
-      .forEach(({ type, filters }) => {
-        standardsFilters.set(
-          type.value?.slug!,
-          //filter empty filters, and save array
-          filters.filter(({ value }) => !!value).map(({ value }) => value!)
-        );
-      });
+    (
+      params
+        // check we have a type
+        .filter(({ type }) => !!type.value?.slug) as Array<
+        SavedFilter & {
+          type: { value: MBIResourceType };
+        }
+      >
+    ).forEach(({ type, filters }) => {
+      standardsFilters.set(
+        type.value.slug,
+        // filter empty filters, and save array
+        (
+          filters.filter(({ value }) => !!value) as Array<{ value: string }>
+        ).map(({ value }) => value),
+      );
+    });
 
     return standardsFilters;
   }
 
-  private convertRecordOfStringsFilterToMap(params?: Record<string, StringOrArrayOfStrings>): Map<string, string[]> {
-    const standardsFilters: Map<string, string[]> = new Map<string, string[]>();
+  private static convertRecordOfStringsFilterToMap(
+    params?: Record<string, StringOrArrayOfStrings>,
+  ): Map<string, Array<string>> {
+    const standardsFilters: Map<string, Array<string>> = new Map<
+      string,
+      Array<string>
+    >();
 
     if (!params) {
       return standardsFilters;
@@ -328,12 +423,16 @@ export class CentreonDataSource extends DataSourceApi<MyQuery, CentreonMetricOpt
 
     (
       Object.entries(params)
-        //filter params without type, or without filters, or empty filters
+        // filter params without type, or without filters, or empty filters
         .filter(
-          ([type, pFilters]) => type && pFilters && Array.isArray(pFilters) && pFilters.filter((f) => !!f)
-        ) as Array<[string, string | string[]]>
+          ([type, pFilters]) =>
+            type &&
+            pFilters &&
+            Array.isArray(pFilters) &&
+            pFilters.filter((f) => !!f),
+        ) as Array<[string, string | Array<string>]>
     )
-      //then add them in map
+      // then add them in map
       .forEach(([type, pFilters]) => {
         const filters = Array.isArray(pFilters) ? pFilters : [pFilters];
         standardsFilters.set(type, filters);
@@ -342,10 +441,10 @@ export class CentreonDataSource extends DataSourceApi<MyQuery, CentreonMetricOpt
     return standardsFilters;
   }
 
-  private interpolateVariables(
-    inputFilters: Map<string, string[]>,
-    scopedVars?: ScopedVars
-  ): Array<[string, string[]]> {
+  private static interpolateVariables(
+    inputFilters: Map<string, Array<string>>,
+    scopedVars?: ScopedVars,
+  ): Array<[string, Array<string>]> {
     const templateSrv = getTemplateSrv();
 
     if (!templateSrv) {
@@ -356,20 +455,29 @@ export class CentreonDataSource extends DataSourceApi<MyQuery, CentreonMetricOpt
     return Array.from(inputFilters).map(([type, pFilters]) => {
       const filters = pFilters
         .map((filter) => {
-          const filterParsed = templateSrv.replace(filter || '', scopedVars, 'json');
-          //if replace doesn't change . It doesn't contain a variable
+          const filterParsed = templateSrv.replace(
+            filter || '',
+            scopedVars,
+            'json',
+          );
+          // if replace doesn't change . It doesn't contain a variable
           if (filter === filterParsed) {
             return filter;
           }
 
-          //else try to json parse it . And check we have strings or equivalent
+          // else try to json parse it . And check we have strings or equivalent
           const tmpNewFilters = JSON.parse(filterParsed);
-          const newFilters = Array.isArray(tmpNewFilters) ? tmpNewFilters : [tmpNewFilters];
+          const newFilters = Array.isArray(tmpNewFilters)
+            ? tmpNewFilters
+            : [tmpNewFilters];
 
           newFilters.forEach((value) => {
             // disable eqeqeq to check if value to string == value (like a number)
             /* eslint eqeqeq: "off" */
-            if (value != value.toString() || typeof value.toString() !== 'string') {
+            if (
+              value != value.toString() ||
+              typeof value.toString() !== 'string'
+            ) {
               throw new Error(`filter "${value}" seems to not be a string`);
             }
           });
@@ -377,37 +485,52 @@ export class CentreonDataSource extends DataSourceApi<MyQuery, CentreonMetricOpt
           return newFilters;
         })
         .flat();
+
       return [type, filters];
     });
   }
 
-  private generateUrlSearchParamsFilters(
-    params?: Record<string, undefined | string | Array<undefined | string>> | SavedFilter[],
-    scopedVars?: ScopedVars
+  private static generateUrlSearchParamsFilters(
+    params?:
+      | Record<string, undefined | string | Array<undefined | string>>
+      | Array<SavedFilter>,
+    scopedVars?: ScopedVars,
   ): URLSearchParams {
     // convert filters to a standards format
-    let standardsFilters: Map<string, string[]> = new Map<string, string[]>();
+    let standardsFilters: Map<string, Array<string>> = new Map<
+      string,
+      Array<string>
+    >();
 
     if (Array.isArray(params)) {
-      standardsFilters = this.convertArrayOfSavedFilterToMap(params);
+      standardsFilters =
+        CentreonDataSource.convertArrayOfSavedFilterToMap(params);
     } else if (params) {
-      standardsFilters = this.convertRecordOfStringsFilterToMap(params);
+      standardsFilters =
+        CentreonDataSource.convertRecordOfStringsFilterToMap(params);
     }
 
-    const finalArray = this.interpolateVariables(standardsFilters, scopedVars);
+    const finalArray = CentreonDataSource.interpolateVariables(
+      standardsFilters,
+      scopedVars,
+    );
 
     const searchParams = new URLSearchParams();
 
-    Array.from(finalArray).forEach(([type, filters]: [string, string[]]) => {
-      filters.forEach((filter) => searchParams.append(`${type}[]`, filter));
-    });
+    Array.from(finalArray).forEach(
+      ([type, filters]: [string, Array<string>]) => {
+        filters.forEach((filter) => searchParams.append(`${type}[]`, filter));
+      },
+    );
 
     return searchParams;
   }
 
-  async getResources(
+  public async getResources(
     resourceType: MBIResourceType,
-    params?: Record<string, undefined | string | Array<undefined | string>> | SavedFilter[]
+    params?:
+      | Record<string, undefined | string | Array<undefined | string>>
+      | Array<SavedFilter>,
   ): Promise<Array<{ label: string; value: string }>> {
     if (resourceType.list_endpoint === '') {
       return [];
@@ -416,21 +539,30 @@ export class CentreonDataSource extends DataSourceApi<MyQuery, CentreonMetricOpt
     return (
       await this.call<CentreonList<{ id: string; name: string }>>({
         url: `/data-source/${resourceType.list_endpoint}${
-          params ? '?' + this.generateUrlSearchParamsFilters(params) : ''
+          params
+            ? `?${CentreonDataSource.generateUrlSearchParamsFilters(params)}`
+            : ''
         }`,
       })
     ).data.result.map(({ name }) => ({ label: name, value: name }));
-    //use ID or name in the value ?
+    // use ID or name in the value ?
   }
 
-  buildRawQuery(filters?: SavedFilter[]): string {
+  public static buildRawQuery(filters?: Array<SavedFilter>): string {
     return (filters || [])
       .filter((value) => value.type && value.filters.length > 0)
-      .map((value) => `${value.type.value?.slug}="${value.filters.map((f) => f.value).join('","')}"`)
+      .map(
+        (value) =>
+          `${value.type.value?.slug}="${value.filters
+            .map((f) => f.value)
+            .join('","')}"`,
+      )
       .join(' ');
   }
 
-  async buildFiltersQuery(rawSelector?: string): Promise<SavedFilter[]> {
+  public async buildFiltersQuery(
+    rawSelector?: string,
+  ): Promise<Array<SavedFilter>> {
     const types = await this.getResourceList();
 
     return (rawSelector || '')
@@ -438,29 +570,39 @@ export class CentreonDataSource extends DataSourceApi<MyQuery, CentreonMetricOpt
       .filter((v) => !!v)
       .map((group) => group.split('='))
       .map(([type, filters]) => {
-        const currentType: SelectableValue<MBIResourceType> | undefined = types.find((t) => t.value?.slug === type);
+        const currentType: SelectableValue<MBIResourceType> | undefined =
+          types.find((t) => t.value?.slug === type);
 
         if (!currentType) {
           throw new Error(`fail to find type "${type}"`);
         }
 
         return {
-          id: Date.now(),
-          type: {
-            label: type,
-            value: currentType.value,
-          },
-          filters: [...(',' + filters).matchAll(/[=,](?:"([^"]*(?:""[^"]*)*)"|([^",\r\n]*))/gi)].map((fullMatch) => {
+          filters: [
+            ...`,${filters}`.matchAll(
+              /[=,](?:"([^"]*(?:""[^"]*)*)"|([^",\r\n]*))/gi,
+            ),
+          ].map((fullMatch) => {
             const [, m1, m2, m3] = fullMatch;
             const filter = m1 || m2 || m3;
             if (!filter) {
-              throw new Error(`something is wrong with the current filter : ${JSON.stringify(fullMatch)}`);
+              throw new Error(
+                `something is wrong with the current filter : ${JSON.stringify(
+                  fullMatch,
+                )}`,
+              );
             }
+
             return {
               label: filter,
               value: filter,
             };
           }),
+          id: Date.now(),
+          type: {
+            label: type,
+            value: currentType.value,
+          },
         };
       });
   }

@@ -1,13 +1,18 @@
 import React from 'react';
+
 import { RadioButtonGroup } from '@grafana/ui';
+
 import { EMode } from './EMode';
 
-type Props = {
+interface Props {
   mode: EMode;
   onChange: (newMode: EMode) => void;
-};
+}
 
-export const QueryEditorModeSwitcher = ({ mode, onChange }: Props): JSX.Element => {
+export const QueryEditorModeSwitcher = ({
+  mode,
+  onChange,
+}: Props): JSX.Element => {
   return (
     <RadioButtonGroup
       options={[
