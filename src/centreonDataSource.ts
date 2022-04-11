@@ -136,56 +136,66 @@ export class CentreonDataSource extends DataSourceApi<
    * Throw exception if succeed
    */
   private manageHTTPError(
-    err: FetchError<ApiErrorOrGrafanaProxyError> | any,
+    err: FetchError<ApiErrorOrGrafanaProxyError> | unknown,
   ): void {
-    const { status, data, statusText } = err;
+    if (
+      (err as FetchError<ApiErrorOrGrafanaProxyError>).status != undefined &&
+      (err as FetchError<ApiErrorOrGrafanaProxyError>).data != undefined &&
+      (err as FetchError<ApiErrorOrGrafanaProxyError>).statusText != undefined
+    ) {
+      const { status, data, statusText } =
+        err as FetchError<ApiErrorOrGrafanaProxyError>;
 
-    enum Errors {
-      API_NOT_FOUND = 'Fail to call the API, did you install the MBI extension ?',
-      BAD_REQUEST = 'Unknown error when contacting the Centreon API',
-      LICENSE_REQUIRED = "The module doesn't have a valid license",
-      NO_RIGHTS = "The user doesn't have the rights, please validate the ACL on Centreon.",
-      UNAUTHORIZED = 'This user is not authorized to use this API',
-      SERVER_ERROR = 'Fail to use MBI API. Did you install the MBI extension ?',
-      DEFAULT = `Error accessing Centreon instance, it is up and running at {{centreonURL}} ?`,
-    }
-
-    if ((data as APIError).code !== undefined) {
-      const apiErr = data as APIError;
-
-      if (apiErr.message?.toLowerCase().startsWith('no route found')) {
-        throw new Error(Errors.API_NOT_FOUND);
+      enum Errors {
+        API_NOT_FOUND = 'Fail to call the API, did you install the MBI extension ?',
+        BAD_REQUEST = 'Unknown error when contacting the Centreon API',
+        LICENSE_REQUIRED = "The module doesn't have a valid license",
+        NO_RIGHTS = "The user doesn't have the rights, please validate the ACL on Centreon.",
+        UNAUTHORIZED = 'This user is not authorized to use this API',
+        SERVER_ERROR = 'Fail to use MBI API. Did you install the MBI extension ?',
+        DEFAULT = `Error accessing Centreon instance, it is up and running at {{centreonURL}} ?`,
       }
 
-      switch (status) {
-        case 400:
-          throw new Error(Errors.BAD_REQUEST);
-        case 401:
-          throw new Error(Errors.LICENSE_REQUIRED);
-        case 402:
-          throw new Error(Errors.NO_RIGHTS);
-        case 403:
-          throw new Error(Errors.UNAUTHORIZED);
-        case 500:
-        default:
-          if (apiErr.message) {
-            throw new Error(`Centreon return an error ${apiErr.message}`);
-          }
-          if (status === 500) {
-            throw new Error(Errors.SERVER_ERROR);
-          }
-          throw new Error(
-            Errors.DEFAULT.replace('{{centreonURL}}', this.centreonURL),
-          );
+      if ((data as APIError).code !== undefined) {
+        const apiErr = data as APIError;
+
+        if (apiErr.message?.toLowerCase().startsWith('no route found')) {
+          throw new Error(Errors.API_NOT_FOUND);
+        }
+
+        switch (status) {
+          case 400:
+            throw new Error(Errors.BAD_REQUEST);
+          case 401:
+            throw new Error(Errors.LICENSE_REQUIRED);
+          case 402:
+            throw new Error(Errors.NO_RIGHTS);
+          case 403:
+            throw new Error(Errors.UNAUTHORIZED);
+          case 500:
+          default:
+            if (apiErr.message) {
+              throw new Error(`Centreon return an error ${apiErr.message}`);
+            }
+            if (status === 500) {
+              throw new Error(Errors.SERVER_ERROR);
+            }
+            throw new Error(
+              Errors.DEFAULT.replace('{{centreonURL}}', this.centreonURL),
+            );
+        }
+      } else if ((data as GrafanaProxyError).error !== undefined) {
+        const proxyErr = data as GrafanaProxyError;
+        throw new Error(`${proxyErr?.error} : ${proxyErr?.message}`);
       }
-    } else if ((data as GrafanaProxyError).error !== undefined) {
-      const proxyErr = data as GrafanaProxyError;
-      throw new Error(`${proxyErr?.error} : ${proxyErr?.message}`);
-    } else if (statusText) {
-      throw new Error(`Unknown error ${statusText}`);
+
+      if (statusText) {
+        throw new Error(`Unknown error ${statusText}`);
+      }
     }
+
     // eslint-disable-next-line no-console
-    console.log('manageHTTPError', err);
+    console.log('manageHTTPError unknown error', err);
   }
 
   private async privateCall<T>(
