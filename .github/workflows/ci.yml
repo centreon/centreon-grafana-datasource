@@ -45,8 +45,8 @@ jobs:
 
       - name: Build and test frontend
         run: |
-        yarn eslint
-        yarn build
+          yarn eslint
+          yarn build
 
       - name: Check for backend
         id: check-for-backend
