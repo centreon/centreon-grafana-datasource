@@ -91,22 +91,18 @@ export const CentreonFilters = ({
     [filters, datasource],
   );
 
-  let errors: Array<string> = [];
-
-  // search filters in double
-  const usedFilters: Array<string> = [];
-  filters.forEach((filter): void => {
-    const { value } = filter.type;
-    if (value?.slug && usedFilters.includes(value.slug)) {
-      errors.push(`Filter types need to be uniq (${filter.type.label})`);
-
-      return;
-    }
-
-    if (filter.type.value) {
-      usedFilters.push(filter.type.value.slug);
-    }
-  });
+  // search filters in double (has a value ? with same slug ?)
+  let errors: Array<string> = filters
+    .filter(
+      (item, index) =>
+        item.type.value?.slug &&
+        !!filters.find(
+          (value, index1) =>
+            value.type.value?.slug === item.type.value?.slug &&
+            index !== index1,
+        ),
+    )
+    .map((value) => `Filter types need to be uniq (${value.type.label})`);
 
   const showFilters = filters;
 
