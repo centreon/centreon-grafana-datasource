@@ -30,8 +30,6 @@ export const QueryEditor: React.FC<Props> = (props: Props) => {
 
   const onChange = useCallback((value: MyQuery) => {
     parentOnchange(value);
-    // onChange from parent seems to change everytime, and so create an infinite loop
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const onModeChange = useCallback(

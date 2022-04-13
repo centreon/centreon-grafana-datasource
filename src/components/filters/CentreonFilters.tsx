@@ -95,19 +95,17 @@ export const CentreonFilters = ({
 
   // search filters in double
   const usedFilters: Array<string> = [];
-  filters.forEach((filter) => {
+  filters.forEach((filter): void => {
     const { value } = filter.type;
     if (value?.slug && usedFilters.includes(value.slug)) {
       errors.push(`Filter types need to be uniq (${filter.type.label})`);
 
-      return true;
+      return;
     }
 
     if (filter.type.value) {
       usedFilters.push(filter.type.value.slug);
     }
-
-    return false;
   });
 
   const showFilters = filters;

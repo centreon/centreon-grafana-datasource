@@ -6,8 +6,6 @@
 import express, { Router } from 'express';
 import cors from 'cors';
 
-// => file for mock only
-// eslint-disable-next-line import/no-relative-packages
 import { MBIResourceType } from '../../src/@types/centreonAPI';
 
 const getRandomArbitrary = (min: number, max: number): number => Math.round(Math.random() * (max - min) + min);
@@ -23,10 +21,8 @@ const router = Router();
 
 app.use('/centreon/api/latest', router);
 
-router.use((req, res, next) => {
+router.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
   try {
-    // debug mock
-    // eslint-disable-next-line no-console
     console.log(
       `${req.method} ${req.originalUrl} \n  headers : \n\t${Object.entries(req.headers)
         .map(([k, v]) => `${k}: ${v}`)
@@ -37,9 +33,7 @@ router.use((req, res, next) => {
   }
 });
 
-// mock
-// eslint-disable-next-line @typescript-eslint/ban-types
-const ensureAuthenticated = (req: express.Request, res: express.Response, next: Function): void => {
+const ensureAuthenticated = (req: express.Request, res: express.Response, next: express.NextFunction): void => {
   const token = req.header('X-AUTH-TOKEN');
   if (token && Number(token) > Date.now()) {
     next();

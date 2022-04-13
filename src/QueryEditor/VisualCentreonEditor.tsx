@@ -28,8 +28,6 @@ export const VisualCentreonEditor = ({
     (filters: Array<SavedFilter>) => {
       onChange({ ...query, filters });
     },
-    // don't know how to resolve it . And other parts of query are not important
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [onChange],
   );
   // this is duplicated, but no idea how to do it correctly for the moment

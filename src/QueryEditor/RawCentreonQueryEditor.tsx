@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { FormEvent, useState } from 'react';
 
 import { TextArea } from '@grafana/ui';
 
@@ -27,6 +27,9 @@ export const RawCentreonQueryEditor = ({
     onRunQuery();
   };
 
+  const onTextAreaChange = (event: FormEvent<HTMLTextAreaElement>): void =>
+    setCurrentQuery(event.currentTarget.value);
+
   return (
     <TextArea
       aria-label="query"
@@ -35,9 +38,7 @@ export const RawCentreonQueryEditor = ({
       spellCheck={false}
       value={currentQuery ?? ''}
       onBlur={applyDelayedChangesAndRunQuery}
-      onChange={(e): void => {
-        setCurrentQuery(e.currentTarget.value);
-      }}
+      onChange={onTextAreaChange}
     />
   );
 };
