@@ -96,7 +96,7 @@ export const CentreonFilters = ({
     .filter(
       (item, index) =>
         item.type.value?.slug &&
-        !!filters.find(
+        filters.some(
           (value, index1) =>
             value.type.value?.slug === item.type.value?.slug &&
             index !== index1,
