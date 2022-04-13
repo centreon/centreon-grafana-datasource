@@ -1,11 +1,11 @@
 {
   "$schema": "https://raw.githubusercontent.com/grafana/grafana/master/docs/sources/developers/plugins/plugin.schema.json",
   "type": "datasource",
-  "name": "centreon",
+  "name": "Centreon",
   "id": "centreon-datasource",
   "metrics": true,
   "info": {
-    "description": "",
+    "description": "Use Centreon datas in your dashboards",
     "author": {
       "name": "Centreon",
       "url": "https://centreon.com"
@@ -18,11 +18,11 @@
     "links": [
       {
         "name": "Website",
-        "url": "https://github.com/grafana/grafana-starter-datasource"
+        "url": "https://github.com/centreon/centreon-grafana-datasource"
       },
       {
         "name": "License",
-        "url": "https://github.com/grafana/grafana-starter-datasource/blob/master/LICENSE"
+        "url": "https://github.com/centreon/centreon-grafana-datasource/blob/master/LICENSE"
       }
     ],
     "screenshots": [],
@@ -48,15 +48,7 @@
     },
     {
       "path": "centreon",
-      "url": "{{ .JsonData.centreonURL }}/api/latest/login",
-      "body": {
-        "security": {
-          "credentials": {
-            "login": "{{ .JsonData.username }}",
-            "password": "{{ .SecureJsonData.password }}"
-          }
-        }
-      }
+      "url": "{{ .JsonData.centreonURL }}/api/latest"
     }
   ]
 }

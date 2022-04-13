@@ -1,14 +1,21 @@
-import { DataQuery, DataSourceJsonData } from '@grafana/data';
+import { DataQuery, DataSourceJsonData, SelectableValue } from '@grafana/data';
+
+import { EMode } from '../QueryEditor/EMode';
+
+import { SavedFilter } from './SavedFilter';
+import { MBIResourceType } from './centreonAPI';
 
 export interface MyQuery extends DataQuery {
-  queryText?: string;
-  constant: number;
-  frequency: number;
+  filters?: Array<SavedFilter>;
+
+  mode?: EMode;
+
+  rawSelector?: string;
+  resourceType?: SelectableValue<MBIResourceType>;
 }
 
 export const defaultQuery: Partial<MyQuery> = {
-  constant: 6.5,
-  frequency: 1.0,
+  rawSelector: 'host="berlin" metric="load"',
 };
 
 /**
@@ -25,27 +32,34 @@ export enum EAccess {
 }
 
 export interface CentreonMetricOptions extends DataSourceJsonData {
-  centreonURL: string;
-  username: string;
   access: EAccess;
-  //only if using browser
+  centreonURL: string;
+  // only if using browser
   password?: string;
+  username: string;
 }
 
 export enum ERoutes {
-  LOGIN = '/centreon-login',
   API = '/centreon',
+  LOGIN = '/centreon-login',
 }
 
 export interface CentreonLoginResult {
   contact: {
-    id: number;
-    name: string;
     alias: string;
     email: string;
+    id: number;
     is_admin: boolean;
+    name: string;
   };
   security: {
     token: string;
   };
 }
+
+export type TypeFilter = SelectableValue<MBIResourceType>;
+
+export type StringOrArrayOfStrings =
+  | undefined
+  | string
+  | Array<undefined | string>;

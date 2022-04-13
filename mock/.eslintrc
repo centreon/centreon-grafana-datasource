@@ -1,0 +1,7 @@
+{
+  "extends": "../.eslintrc",
+  "rules": {
+    "no-console": ["off"],
+    "import/no-relative-packages": ["off"]
+  }
+}
