@@ -2,7 +2,7 @@
   "$schema": "https://raw.githubusercontent.com/grafana/grafana/master/docs/sources/developers/plugins/plugin.schema.json",
   "type": "datasource",
   "name": "Centreon",
-  "id": "centreon-datasource",
+  "id": "centreon2-centreon-datasource",
   "metrics": true,
   "info": {
     "description": "Use Centreon datas in your dashboards",
