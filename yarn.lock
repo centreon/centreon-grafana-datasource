@@ -4672,7 +4672,7 @@ caseless@~0.12.0:
 
 "centreon-frontend@git+https://centreon@github.com/centreon/centreon-frontend.git#develop":
   version "22.4.0"
-  resolved "git+https://centreon@github.com/centreon/centreon-frontend.git#fa8ca24fef929275cfeda9e79ab03beb8e943a8d"
+  resolved "git+https://centreon@github.com/centreon/centreon-frontend.git#48108036ffd6f05cec3e274f1e5a1944d3ac6c46"
   dependencies:
     "@dnd-kit/core" "^5.0.1"
     "@dnd-kit/modifiers" "^5.0.0"
@@ -4691,13 +4691,12 @@ caseless@~0.12.0:
     formik "^2.2.9"
     humanize-duration "^3.27.1"
     i18next "^21.6.10"
-    notistack "^2.0.3"
+    notistack "2.0.3"
     numeral "^2.0.6"
     prop-types "^15.8.1"
     ramda "^0.28.0"
-    react "^17.0.2"
-    react-dom "^17.0.2"
-    react-files "^2.4.9"
+    react "^18.0.0"
+    react-dom "^18.0.0"
     react-i18next "^11.15.3"
     react-router-dom "^6.2.1"
     resize-observer-polyfill "^1.5.1"
