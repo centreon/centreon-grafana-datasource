@@ -1,16 +1,17 @@
 import React, { useEffect, useState, useCallback } from 'react';
 
 import { Alert, Button } from '@grafana/ui';
-import { SelectableValue } from '@grafana/data';
+import { SelectableValue, VariableModel } from '@grafana/data';
+import { getTemplateSrv } from '@grafana/runtime';
 
 import { SavedFilter } from '../../@types/SavedFilter';
 import { CentreonDataSource } from '../../centreonDataSource';
 import { MBIResourceType } from '../../@types/centreonAPI';
+import { MyQuery } from '../../@types/types';
 
 import { Filter } from './Filter';
 
 interface Props {
-  customFilters?: Record<string, Array<SelectableValue<string>>>;
   datasource: CentreonDataSource;
   filters?: Array<SavedFilter>;
   forceBottom?: boolean;
@@ -25,7 +26,6 @@ export const CentreonFilters = ({
   datasource,
   filters: defaultFilters = [],
   types = [],
-  customFilters = {},
   forceBottom = false,
 }: Props): JSX.Element => {
   const [filters, setFilters] = useState<Array<SavedFilter>>(
@@ -116,6 +116,28 @@ export const CentreonFilters = ({
     // want to include errors, but produce a loop
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters, onChange]);
+
+  const customFilters: Record<string, Array<SelectableValue<string>>> = {};
+
+  getTemplateSrv()
+    .getVariables()
+    .forEach((v) => {
+      const type =
+        (v as unknown as VariableModel & { query: MyQuery }).query.resourceType
+          ?.value || '';
+      if (!type) {
+        // never pass here if variable correctly set
+        return;
+      }
+      if (!customFilters[type.slug]) {
+        customFilters[type.slug] = [];
+      }
+
+      customFilters[type.slug].push({
+        label: `$${v.name}`,
+        value: `$${v.name}`,
+      });
+    });
 
   return (
     <div className="gf-form-group">
