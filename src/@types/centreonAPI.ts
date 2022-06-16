@@ -21,6 +21,7 @@ export interface MBIResourceType {
 
 export interface TimeSeriesMetric {
   id: number;
+  labels?: Record<string, string>;
   name: string;
   timeserie: Array<{ datetime: isoDateString; value: number }>;
   unit: string;

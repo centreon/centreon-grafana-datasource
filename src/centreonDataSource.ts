@@ -338,6 +338,10 @@ export class CentreonDataSource extends DataSourceApi<
               new MutableDataFrame({
                 fields: [
                   {
+                    labels: {
+                      ...metric.labels,
+                      metric_name: metric.name,
+                    },
                     name: `${metric.name}.time`,
                     type: FieldType.time,
                     values: metric.timeserie
@@ -347,6 +351,10 @@ export class CentreonDataSource extends DataSourceApi<
                   {
                     config: {
                       unit: metric.unit,
+                    },
+                    labels: {
+                      ...metric.labels,
+                      metric_name: metric.name,
                     },
                     name: metric.name,
                     type: FieldType.number,
