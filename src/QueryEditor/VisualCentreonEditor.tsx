@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 
-import { SelectableValue, VariableModel } from '@grafana/data';
-import { getTemplateSrv } from '@grafana/runtime';
+import { SelectableValue } from '@grafana/data';
 
 import { MyQuery } from '../@types/types';
 import { CentreonDataSource } from '../centreonDataSource';
@@ -45,32 +44,9 @@ export const VisualCentreonEditor = ({
     })();
   }, [datasource]);
 
-  const customFilters: Record<string, Array<SelectableValue<string>>> = {};
-
-  getTemplateSrv()
-    .getVariables()
-    .forEach((v) => {
-      const type =
-        (v as unknown as VariableModel & { query: MyQuery }).query.resourceType
-          ?.value || '';
-      if (!type) {
-        // never pass here if variable correctly set
-        return;
-      }
-      if (!customFilters[type.slug]) {
-        customFilters[type.slug] = [];
-      }
-
-      customFilters[type.slug].push({
-        label: `$${v.name}`,
-        value: `$${v.name}`,
-      });
-    });
-
   return (
     <CentreonFilters
       forceBottom
-      customFilters={customFilters}
       datasource={datasource}
       filters={query.filters}
       types={resourcesTypes}
