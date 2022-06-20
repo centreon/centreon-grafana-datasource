@@ -159,27 +159,36 @@ export class CentreonDataSource extends DataSourceApi<
       if ((data as APIError).code !== undefined) {
         const apiErr = data as APIError;
 
+        // check if the error start with "no route found", telling us the API is not here
         if (apiErr.message?.toLowerCase().startsWith('no route found')) {
           throw new Error(Errors.API_NOT_FOUND);
         }
 
+        // check specific status code
         switch (status) {
-          case 400:
-            throw new Error(Errors.BAD_REQUEST);
           case 401:
             throw new Error(Errors.LICENSE_REQUIRED);
           case 402:
             throw new Error(Errors.NO_RIGHTS);
           case 403:
             throw new Error(Errors.UNAUTHORIZED);
-          case 500:
+          // eslint need default
           default:
-            if (apiErr.message) {
-              throw new Error(`Centreon return an error ${apiErr.message}`);
-            }
-            if (status === 500) {
-              throw new Error(Errors.SERVER_ERROR);
-            }
+        }
+
+        // check if we get an api error message
+        if (apiErr.message) {
+          throw new Error(`Centreon return an error "${apiErr.message}"`);
+        }
+
+        // not detected error, use defaults messages
+        switch (status) {
+          case 500:
+            throw new Error(Errors.SERVER_ERROR);
+          case 400:
+            throw new Error(Errors.BAD_REQUEST);
+          default:
+            // use default error
             throw new Error(
               Errors.DEFAULT.replace('{{centreonURL}}', this.centreonURL),
             );
