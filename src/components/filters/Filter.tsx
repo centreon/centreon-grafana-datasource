@@ -101,6 +101,7 @@ export const Filter = ({
             cacheOptions={false}
             defaultValue={filters.map((f) => getResource(type.value, f.value))}
             disabled={!type.value}
+            key={type.value?.slug}
             loadOptions={async (
               name,
             ): Promise<Array<SelectableValue<string>>> => {
