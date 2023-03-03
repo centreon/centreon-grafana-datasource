@@ -3,13 +3,13 @@ import React, { ChangeEvent } from 'react';
 import { InlineField, Input, Select } from '@grafana/ui';
 import {
   DataSourcePluginOptionsEditorProps,
-  SelectableValue,
+  SelectableValue
 } from '@grafana/data';
 
 import {
   CentreonMetricOptions,
   CentreonMetricSecureDatas,
-  EAccess,
+  EAccess
 } from './@types/types';
 
 type Props = DataSourcePluginOptionsEditorProps<
@@ -24,22 +24,22 @@ export const ConfigEditor = (props: Props): JSX.Element => {
 
     const newJSONData = {
       ...options.jsonData,
-      centreonURL,
+      centreonURL
     };
     onOptionsChange({
       ...options,
-      jsonData: newJSONData,
+      jsonData: newJSONData
     });
   };
 
   const onChangeUsername = (event: ChangeEvent<HTMLInputElement>): void => {
     const newJSONData = {
       ...options.jsonData,
-      username: event.target.value,
+      username: event.target.value
     };
     onOptionsChange({
       ...options,
-      jsonData: newJSONData,
+      jsonData: newJSONData
     });
   };
 
@@ -63,7 +63,7 @@ export const ConfigEditor = (props: Props): JSX.Element => {
       ...options,
       jsonData: newJSONData,
       secureJsonData: newSecureJsonData,
-      secureJsonFields: newSecureJsonFields,
+      secureJsonFields: newSecureJsonFields
     });
   };
 
@@ -75,17 +75,17 @@ export const ConfigEditor = (props: Props): JSX.Element => {
     const newJSONData = {
       ...options.jsonData,
       access: selected.value,
-      password: '',
+      password: ''
     };
     onOptionsChange({
       ...options,
       jsonData: newJSONData,
       secureJsonData: {
-        password: '',
+        password: ''
       },
       secureJsonFields: {
-        password: false,
-      },
+        password: false
+      }
     });
   };
 
@@ -96,13 +96,13 @@ export const ConfigEditor = (props: Props): JSX.Element => {
     {
       description: 'The request will be done by the grafana server',
       label: 'Proxy',
-      value: EAccess.PROXY,
+      value: EAccess.PROXY
     },
     {
       description: 'The request will be done by your browser',
       label: 'Browser',
-      value: EAccess.BROWSER,
-    },
+      value: EAccess.BROWSER
+    }
   ];
 
   const password =
@@ -138,7 +138,7 @@ export const ConfigEditor = (props: Props): JSX.Element => {
         <Select<EAccess>
           options={accessOptions}
           value={accessOptions.find(
-            (option) => option.value === (jsonData.access || EAccess.PROXY),
+            (option) => option.value === (jsonData.access || EAccess.PROXY)
           )}
           width={40}
           onChange={onChangeAccessMode}

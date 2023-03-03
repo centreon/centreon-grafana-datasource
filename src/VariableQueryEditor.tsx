@@ -21,7 +21,7 @@ export const VariableQueryEditor: React.FC<
 > = ({ datasource, onChange, query }) => {
   const [state, setState] = useState(query);
   const [filters, setFilters] = useState<Array<SavedFilter>>(
-    state.filters || [],
+    state.filters || []
   );
 
   const [resources, setResources] = useState<
@@ -47,9 +47,9 @@ export const VariableQueryEditor: React.FC<
       ...state,
       filters: filters.filter(
         ({ filters: currentFilters, type }) =>
-          !!currentFilters?.find((f) => f.value) && !!type.value,
+          !!currentFilters?.find((f) => f.value) && !!type.value
       ),
-      resourceType: state.resourceType,
+      resourceType: state.resourceType
     });
   }, [onChange, datasource, filters, state]);
 
@@ -61,10 +61,10 @@ export const VariableQueryEditor: React.FC<
             a.value || {
               display_name: '',
               list_endpoint: '',
-              slug: '',
-            },
+              slug: ''
+            }
         )
-        .sort((a, b) => b.slug.length - a.slug.length)[0]?.slug.length || 10,
+        .sort((a, b) => b.slug.length - a.slug.length)[0]?.slug.length || 10
     ) + 4;
 
   return (
@@ -77,14 +77,14 @@ export const VariableQueryEditor: React.FC<
           options={resources}
           value={
             resources?.find(
-              (resource) => resource.value === state.resourceType?.value,
+              (resource) => resource.value === state.resourceType?.value
             ) || state.resourceType
           }
           width={resourceFieldLength}
           onChange={(value): void => {
             setState({
               ...state,
-              resourceType: value,
+              resourceType: value
             });
           }}
         />

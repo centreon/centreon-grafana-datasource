@@ -26,21 +26,21 @@ export const CentreonFilters = ({
   datasource,
   filters: defaultFilters = [],
   types = [],
-  forceBottom = false,
+  forceBottom = false
 }: Props): JSX.Element => {
   const [filters, setFilters] = useState<Array<SavedFilter>>(
-    defaultFilters || [],
+    defaultFilters || []
   );
 
   const getResource = useCallback(
     (type?: MBIResourceType, value?: string): SelectableValue<string> =>
       resourcesLoaded[type?.slug || '']?.find(
-        (resource) => resource.value && value === resource.value,
+        (resource) => resource.value && value === resource.value
       ) || {
         label: value,
-        value,
+        value
       },
-    [],
+    []
   );
 
   /**
@@ -53,7 +53,7 @@ export const CentreonFilters = ({
   const getResources = useCallback(
     async (
       type: MBIResourceType,
-      queryFilters: Array<string>,
+      queryFilters: Array<string>
     ): Promise<SelectableValue<string>> => {
       try {
         const query = {
@@ -61,14 +61,14 @@ export const CentreonFilters = ({
           ...Object.fromEntries(
             (filters || []).map((filter) => [
               filter.type.value?.slug,
-              filter.filters.map((f) => f.value),
-            ]),
-          ),
+              filter.filters.map((f) => f.value)
+            ])
+          )
         };
 
         const res = await datasource.getResources(type, {
           ...query,
-          [type.slug]: queryFilters,
+          [type.slug]: queryFilters
         });
         resourcesLoaded[type.slug] = (resourcesLoaded[type.slug] || [])
           // add new resources to previous list
@@ -76,7 +76,7 @@ export const CentreonFilters = ({
           // remove duplicate based on .value
           .filter(
             (value, index, self) =>
-              index === self.findIndex((t) => t.value === value.value),
+              index === self.findIndex((t) => t.value === value.value)
           );
 
         return res;
@@ -88,7 +88,7 @@ export const CentreonFilters = ({
         return [];
       }
     },
-    [filters, datasource],
+    [filters, datasource]
   );
 
   // search filters in double (has a value ? with same slug ?)
@@ -98,9 +98,8 @@ export const CentreonFilters = ({
         item.type.value?.slug &&
         filters.some(
           (value, index1) =>
-            value.type.value?.slug === item.type.value?.slug &&
-            index !== index1,
-        ),
+            value.type.value?.slug === item.type.value?.slug && index !== index1
+        )
     )
     .map((value) => `Filter types need to be uniq (${value.type.label})`);
 
@@ -135,7 +134,7 @@ export const CentreonFilters = ({
 
       customFilters[type.slug].push({
         label: `$${v.name}`,
-        value: `$${v.name}`,
+        value: `$${v.name}`
       });
     });
 
@@ -159,7 +158,7 @@ export const CentreonFilters = ({
               newFilters[i] = {
                 filters: updatedFilters,
                 id,
-                type: updatedType,
+                type: updatedType
               };
               setFilters(newFilters);
             }}
@@ -193,10 +192,10 @@ export const CentreonFilters = ({
                   value: {
                     display_name: '',
                     list_endpoint: '',
-                    slug: '',
-                  },
-                },
-              },
+                    slug: ''
+                  }
+                }
+              }
             ]);
           }}
         >

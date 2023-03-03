@@ -25,7 +25,7 @@ export const QueryEditor: React.FC<Props> = (props: Props) => {
   const [loading, setLoading] = useState(false);
   const onRunQueryDebounced = useCallback(
     () => debounce(onRunQuery, 300)(),
-    [onRunQuery],
+    [onRunQuery]
   );
 
   const onChange = useCallback((value: MyQuery) => {
@@ -39,7 +39,7 @@ export const QueryEditor: React.FC<Props> = (props: Props) => {
         onChange({
           ...state,
           mode: newMode,
-          rawSelector,
+          rawSelector
         });
       } else {
         setLoading(true);
@@ -49,11 +49,11 @@ export const QueryEditor: React.FC<Props> = (props: Props) => {
         onChange({
           ...state,
           filters,
-          mode: newMode,
+          mode: newMode
         });
       }
     },
-    [datasource, onChange, setLoading, state],
+    [datasource, onChange, setLoading, state]
   );
 
   useEffect(() => {
