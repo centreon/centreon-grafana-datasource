@@ -7,13 +7,13 @@ import {
   MetricFindValue,
   MutableDataFrame,
   ScopedVars,
-  SelectableValue,
+  SelectableValue
 } from '@grafana/data';
 import { FetchError, getBackendSrv, getTemplateSrv } from '@grafana/runtime';
 import { catchError, lastValueFrom, Observable } from 'rxjs';
 import type {
   BackendSrvRequest,
-  FetchResponse,
+  FetchResponse
 } from '@grafana/runtime/services/backendSrv';
 import { defaults } from 'lodash';
 
@@ -24,7 +24,7 @@ import {
   EAccess,
   ERoutes,
   MyQuery,
-  StringOrArrayOfStrings,
+  StringOrArrayOfStrings
 } from './@types/types';
 import {
   APIError,
@@ -32,7 +32,7 @@ import {
   CentreonList,
   GrafanaProxyError,
   MBIResourceType,
-  TimeSeriesMetric,
+  TimeSeriesMetric
 } from './@types/centreonAPI';
 import { SavedFilter } from './@types/SavedFilter';
 
@@ -54,8 +54,10 @@ export class CentreonDataSource extends DataSourceApi<
 
   private readonly centreonURL: string;
 
+  private readonly typesLimit = 100;
+
   public constructor(
-    instanceSettings: DataSourceInstanceSettings<CentreonMetricOptions>,
+    instanceSettings: DataSourceInstanceSettings<CentreonMetricOptions>
   ) {
     super(instanceSettings);
 
@@ -104,9 +106,9 @@ export class CentreonDataSource extends DataSourceApi<
           security: {
             credentials: {
               login: this.username,
-              password: this.password,
-            },
-          },
+              password: this.password
+            }
+          }
         };
       }
 
@@ -136,7 +138,7 @@ export class CentreonDataSource extends DataSourceApi<
    * Throw exception if succeed
    */
   private manageHTTPError(
-    err: FetchError<ApiErrorOrGrafanaProxyError> | unknown,
+    err: FetchError<ApiErrorOrGrafanaProxyError> | unknown
   ): void {
     if (
       (err as FetchError<ApiErrorOrGrafanaProxyError>).status != undefined &&
@@ -153,7 +155,7 @@ export class CentreonDataSource extends DataSourceApi<
         NO_RIGHTS = "The user doesn't have the rights, please validate the ACL on Centreon.",
         UNAUTHORIZED = 'This user is not authorized to use this API',
         SERVER_ERROR = 'Fail to use MBI API. Did you install the MBI extension ?',
-        DEFAULT = `Error accessing Centreon instance, it is up and running at {{centreonURL}} ?`,
+        DEFAULT = `Error accessing Centreon instance, it is up and running at {{centreonURL}} ?`
       }
 
       if ((data as APIError).code !== undefined) {
@@ -190,7 +192,7 @@ export class CentreonDataSource extends DataSourceApi<
           default:
             // use default error
             throw new Error(
-              Errors.DEFAULT.replace('{{centreonURL}}', this.centreonURL),
+              Errors.DEFAULT.replace('{{centreonURL}}', this.centreonURL)
             );
         }
       } else if ((data as GrafanaProxyError).error !== undefined) {
@@ -209,7 +211,7 @@ export class CentreonDataSource extends DataSourceApi<
 
   private async privateCall<T>(
     request: BackendSrvRequest,
-    opts: Partial<{ authentication: boolean; retry: boolean }> = {},
+    opts: Partial<{ authentication: boolean; retry: boolean }> = {}
   ): Promise<Observable<FetchResponse<T>>> {
     const authHeaders: Record<string, string> = {};
     if (!opts.authentication) {
@@ -229,18 +231,18 @@ export class CentreonDataSource extends DataSourceApi<
       ...request,
       headers: {
         ...authHeaders,
-        ...request.headers,
+        ...request.headers
       },
       url:
         request.url.slice(0, 1) === '/'
           ? this.getUrl() + request.url
-          : request.url,
+          : request.url
     });
   }
 
   private async call<T>(
     request: BackendSrvRequest,
-    opts: Partial<{ authentication: boolean; retry: boolean }> = {},
+    opts: Partial<{ authentication: boolean; retry: boolean }> = {}
   ): Promise<FetchResponse<T>> {
     return lastValueFrom(
       (await this.privateCall<T>(request, opts)).pipe(
@@ -255,8 +257,8 @@ export class CentreonDataSource extends DataSourceApi<
 
             return this.call<T>(request, { retry: false });
           }
-        }),
-      ),
+        })
+      )
     );
   }
 
@@ -281,25 +283,25 @@ export class CentreonDataSource extends DataSourceApi<
       (
         await this.privateCall<Array<MBIResourceType>>(
           {
-            url: '/data-source/types',
+            url: '/data-source/types'
           },
-          { retry: false },
+          { retry: false }
         )
       ).pipe(
         catchError(async (err) => {
           this.manageHTTPError(err);
-        }),
-      ),
+        })
+      )
     );
 
     return {
       message: `Connected with user ${username}`,
-      status: 'success',
+      status: 'success'
     };
   }
 
   public async metricFindQuery(
-    query: MyQuery,
+    query: MyQuery
   ): Promise<Array<MetricFindValue>> {
     const { resourceType, filters } = query;
 
@@ -311,13 +313,13 @@ export class CentreonDataSource extends DataSourceApi<
       ({ label, value }) => ({
         expandable: false,
         text: label,
-        value,
-      }),
+        value
+      })
     );
   }
 
   public async query(
-    options: DataQueryRequest<MyQuery>,
+    options: DataQueryRequest<MyQuery>
   ): Promise<DataQueryResponse> {
     const { range } = options;
     const from = range.from.toISOString();
@@ -331,7 +333,7 @@ export class CentreonDataSource extends DataSourceApi<
 
         const searchParams = CentreonDataSource.generateUrlSearchParamsFilters(
           query.filters,
-          options.scopedVars,
+          options.scopedVars
         );
 
         searchParams.append('end', to.toString());
@@ -340,7 +342,7 @@ export class CentreonDataSource extends DataSourceApi<
           // call centreon timeSeries + build DataFrame (one per metric . One call can return multiple metrics)
           (
             await this.call<Array<TimeSeriesMetric>>({
-              url: `/data-source/metrics/timeseries?${searchParams}`,
+              url: `/data-source/metrics/timeseries?${searchParams}`
             })
           ).data.forEach((metric) => {
             data.push(
@@ -349,38 +351,38 @@ export class CentreonDataSource extends DataSourceApi<
                   {
                     labels: {
                       ...metric.labels,
-                      metric_name: metric.name,
+                      metric_name: metric.name
                     },
                     name: `${metric.name}.time`,
                     type: FieldType.time,
                     values: metric.timeserie
                       .filter((e) => e.value !== null)
-                      .map((element) => new Date(element.datetime)),
+                      .map((element) => new Date(element.datetime))
                   },
                   {
                     config: {
-                      unit: metric.unit,
+                      unit: metric.unit
                     },
                     labels: {
                       ...metric.labels,
-                      metric_name: metric.name,
+                      metric_name: metric.name
                     },
                     name: metric.name,
                     type: FieldType.number,
                     values: metric.timeserie
                       .filter((e) => e.value !== null)
-                      .map((element) => element.value),
-                  },
+                      .map((element) => element.value)
+                  }
                 ],
-                refId: query.refId,
-              }),
+                refId: query.refId
+              })
             );
           });
         } catch (e) {
           console.error(e);
           throw e;
         }
-      }),
+      })
     );
 
     return { data };
@@ -391,20 +393,20 @@ export class CentreonDataSource extends DataSourceApi<
   > {
     return (
       await this.call<Array<MBIResourceType>>({
-        url: '/data-source/types',
+        url: '/data-source/types'
       })
     ).data.map((type) => ({
       label: type.display_name,
       value: {
         ...type,
         // keep only the last part of the list_endpoint
-        list_endpoint: type.list_endpoint.split('/').pop() || '',
-      },
+        list_endpoint: type.list_endpoint.split('/').pop() || ''
+      }
     }));
   }
 
   private static convertArrayOfSavedFilterToMap(
-    params?: Array<SavedFilter>,
+    params?: Array<SavedFilter>
   ): Map<string, Array<string>> {
     const standardsFilters: Map<string, Array<string>> = new Map<
       string,
@@ -429,7 +431,7 @@ export class CentreonDataSource extends DataSourceApi<
         // filter empty filters, and save array
         (
           filters.filter(({ value }) => !!value) as Array<{ value: string }>
-        ).map(({ value }) => value),
+        ).map(({ value }) => value)
       );
     });
 
@@ -437,7 +439,7 @@ export class CentreonDataSource extends DataSourceApi<
   }
 
   private static convertRecordOfStringsFilterToMap(
-    params?: Record<string, StringOrArrayOfStrings>,
+    params?: Record<string, StringOrArrayOfStrings>
   ): Map<string, Array<string>> {
     const standardsFilters: Map<string, Array<string>> = new Map<
       string,
@@ -456,7 +458,7 @@ export class CentreonDataSource extends DataSourceApi<
             type &&
             pFilters &&
             Array.isArray(pFilters) &&
-            pFilters.filter((f) => !!f),
+            pFilters.filter((f) => !!f)
         ) as Array<[string, string | Array<string>]>
     )
       // then add them in map
@@ -470,7 +472,7 @@ export class CentreonDataSource extends DataSourceApi<
 
   private static interpolateVariables(
     inputFilters: Map<string, Array<string>>,
-    scopedVars?: ScopedVars,
+    scopedVars?: ScopedVars
   ): Array<[string, Array<string>]> {
     const templateSrv = getTemplateSrv();
 
@@ -485,7 +487,7 @@ export class CentreonDataSource extends DataSourceApi<
           const filterParsed = templateSrv.replace(
             filter || '',
             scopedVars,
-            'json',
+            'json'
           );
           // if replace doesn't change . It doesn't contain a variable
           if (filter === filterParsed) {
@@ -521,7 +523,7 @@ export class CentreonDataSource extends DataSourceApi<
     params?:
       | Record<string, undefined | string | Array<undefined | string>>
       | Array<SavedFilter>,
-    scopedVars?: ScopedVars,
+    scopedVars?: ScopedVars
   ): URLSearchParams {
     // convert filters to a standards format
     let standardsFilters: Map<string, Array<string>> = new Map<
@@ -539,7 +541,7 @@ export class CentreonDataSource extends DataSourceApi<
 
     const finalArray = CentreonDataSource.interpolateVariables(
       standardsFilters,
-      scopedVars,
+      scopedVars
     );
 
     const searchParams = new URLSearchParams();
@@ -547,7 +549,7 @@ export class CentreonDataSource extends DataSourceApi<
     Array.from(finalArray).forEach(
       ([type, filters]: [string, Array<string>]) => {
         filters.forEach((filter) => searchParams.append(`${type}[]`, filter));
-      },
+      }
     );
 
     return searchParams;
@@ -557,19 +559,23 @@ export class CentreonDataSource extends DataSourceApi<
     resourceType: MBIResourceType,
     params?:
       | Record<string, undefined | string | Array<undefined | string>>
-      | Array<SavedFilter>,
+      | Array<SavedFilter>
   ): Promise<Array<{ label: string; value: string }>> {
     if (resourceType.list_endpoint === '') {
       return [];
     }
 
+    const urlParams = params
+      ? CentreonDataSource.generateUrlSearchParamsFilters(params)
+      : new URLSearchParams();
+
+    urlParams.set('limit', this.typesLimit.toString());
+
     return (
       await this.call<CentreonList<{ id: string; name: string }>>({
-        url: `/data-source/${resourceType.list_endpoint}${
-          params
-            ? `?${CentreonDataSource.generateUrlSearchParamsFilters(params)}`
-            : ''
-        }`,
+        url: `/data-source/${
+          resourceType.list_endpoint
+        }?${urlParams.toString()}`
       })
     ).data.result.map(({ name }) => ({ label: name, value: name }));
     // use ID or name in the value ?
@@ -582,13 +588,13 @@ export class CentreonDataSource extends DataSourceApi<
         (value) =>
           `${value.type.value?.slug}="${value.filters
             .map((f) => f.value)
-            .join('","')}"`,
+            .join('","')}"`
       )
       .join(' ');
   }
 
   public async buildFiltersQuery(
-    rawSelector?: string,
+    rawSelector?: string
   ): Promise<Array<SavedFilter>> {
     const types = await this.getResourceList();
 
@@ -607,29 +613,29 @@ export class CentreonDataSource extends DataSourceApi<
         return {
           filters: [
             ...`,${filters}`.matchAll(
-              /[=,](?:"([^"]*(?:""[^"]*)*)"|([^",\r\n]*))/gi,
-            ),
+              /[=,](?:"([^"]*(?:""[^"]*)*)"|([^",\r\n]*))/gi
+            )
           ].map((fullMatch) => {
             const [, m1, m2, m3] = fullMatch;
             const filter = m1 || m2 || m3;
             if (!filter) {
               throw new Error(
                 `something is wrong with the current filter : ${JSON.stringify(
-                  fullMatch,
-                )}`,
+                  fullMatch
+                )}`
               );
             }
 
             return {
               label: filter,
-              value: filter,
+              value: filter
             };
           }),
           id: Date.now(),
           type: {
             label: type,
-            value: currentType.value,
-          },
+            value: currentType.value
+          }
         };
       });
   }

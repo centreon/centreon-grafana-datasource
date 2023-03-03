@@ -1,4 +1,4 @@
 export enum EMode {
   RAW,
-  VISUAL,
+  VISUAL
 }

@@ -13,16 +13,16 @@ interface Props {
 export const RawCentreonQueryEditor = ({
   onChange,
   onRunQuery,
-  query,
+  query
 }: Props): JSX.Element => {
   const [currentQuery, setCurrentQuery] = useState<string>(
-    query.rawSelector || '',
+    query.rawSelector || ''
   );
 
   const applyDelayedChangesAndRunQuery = (): void => {
     onChange({
       ...query,
-      rawSelector: currentQuery,
+      rawSelector: currentQuery
     });
     onRunQuery();
   };

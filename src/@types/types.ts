@@ -15,7 +15,7 @@ export interface MyQuery extends DataQuery {
 }
 
 export const defaultQuery: Partial<MyQuery> = {
-  rawSelector: 'host="berlin" metric="load"',
+  rawSelector: 'host="berlin" metric="load"'
 };
 
 /**
@@ -28,7 +28,7 @@ export interface CentreonMetricSecureDatas {
 // use fixed numbers because they are stored ( start to 1, so it's true )
 export enum EAccess {
   PROXY = 1,
-  BROWSER = 2,
+  BROWSER = 2
 }
 
 export interface CentreonMetricOptions extends DataSourceJsonData {
@@ -41,7 +41,7 @@ export interface CentreonMetricOptions extends DataSourceJsonData {
 
 export enum ERoutes {
   API = '/centreon',
-  LOGIN = '/centreon-login',
+  LOGIN = '/centreon-login'
 }
 
 export interface CentreonLoginResult {

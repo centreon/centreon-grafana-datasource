@@ -17,7 +17,7 @@ interface Props {
 export const VisualCentreonEditor = ({
   onChange,
   datasource,
-  query,
+  query
 }: Props): JSX.Element => {
   const [resourcesTypes, setResourcesTypes] = useState<
     Array<SelectableValue<MBIResourceType>>
@@ -27,7 +27,7 @@ export const VisualCentreonEditor = ({
     (filters: Array<SavedFilter>) => {
       onChange({ ...query, filters });
     },
-    [onChange],
+    [onChange]
   );
   // this is duplicated, but no idea how to do it correctly for the moment
   useEffect(() => {

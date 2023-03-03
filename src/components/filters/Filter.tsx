@@ -5,7 +5,7 @@ import {
   Button,
   HorizontalGroup,
   InlineField,
-  Select,
+  Select
 } from '@grafana/ui';
 import { SelectableValue } from '@grafana/data';
 
@@ -19,15 +19,15 @@ interface Props {
   forceBottom: boolean;
   getResource: (
     type?: MBIResourceType,
-    value?: string,
+    value?: string
   ) => SelectableValue<string>;
   getResources: (
     type: MBIResourceType,
-    query: Array<string>,
+    query: Array<string>
   ) => Promise<SelectableValue<string>>;
   onChange?: (
     type: TypeFilter,
-    filters: Array<SelectableValue<string>>,
+    filters: Array<SelectableValue<string>>
   ) => void;
   onDelete?: () => void;
   types: Array<TypeFilter>;
@@ -42,14 +42,14 @@ export const Filter = ({
   onDelete,
   onChange,
   defaultFilters,
-  defaultType,
+  defaultType
 }: Props): JSX.Element => {
   const [type, setType] = useState<TypeFilter>(defaultType);
   const [filters, setFilters] =
     useState<Array<SelectableValue<string>>>(defaultFilters);
   const val = useRef<{ filters: Array<string>; type: MBIResourceType | null }>({
     filters: [],
-    type: null,
+    type: null
   });
 
   useEffect(() => {
@@ -61,7 +61,7 @@ export const Filter = ({
       onChange?.(type, filters);
       val.current = {
         filters: filters.map((f) => f.value || ''),
-        type: type.value || null,
+        type: type.value || null
       };
     }
   }, [type, filters, onChange]);
@@ -69,7 +69,7 @@ export const Filter = ({
   const menuPlacement = forceBottom ? 'bottom' : 'auto';
 
   const loadedFilter = types?.find(
-    (resource) => resource.value?.slug === type.value?.slug,
+    (resource) => resource.value?.slug === type.value?.slug
   );
   const typesLoading = !types || types.length === 0;
 
@@ -85,7 +85,7 @@ export const Filter = ({
           value={
             loadedFilter || {
               label: type.value?.display_name,
-              value: type.value,
+              value: type.value
             }
           }
           width={50}
@@ -103,7 +103,7 @@ export const Filter = ({
             disabled={!type.value}
             key={type.value?.slug}
             loadOptions={async (
-              name,
+              name
             ): Promise<Array<SelectableValue<string>>> => {
               let ret: Array<SelectableValue<string>> =
                 customFilters[type.value?.slug || ''] || [];
@@ -118,9 +118,9 @@ export const Filter = ({
                     type.value,
                     [
                       ...filters.map((f) => f.value || ''),
-                      name ? `${name}*` : '',
-                    ].filter((v) => !!v),
-                  ),
+                      name ? `${name}*` : ''
+                    ].filter((v) => !!v)
+                  )
                 );
               } else {
                 return [];
@@ -133,7 +133,7 @@ export const Filter = ({
             width={50}
             onChange={(selectedValue): void => {
               setFilters(
-                selectedValue as unknown as Array<SelectableValue<string>>,
+                selectedValue as unknown as Array<SelectableValue<string>>
               );
             }}
           />

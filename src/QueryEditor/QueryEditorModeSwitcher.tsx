@@ -11,19 +11,19 @@ interface Props {
 
 export const QueryEditorModeSwitcher = ({
   mode,
-  onChange,
+  onChange
 }: Props): JSX.Element => {
   return (
     <RadioButtonGroup
       options={[
         {
           label: 'raw',
-          value: EMode.RAW,
+          value: EMode.RAW
         },
         {
           label: 'visual',
-          value: EMode.VISUAL,
-        },
+          value: EMode.VISUAL
+        }
       ]}
       size="sm"
       value={mode}
