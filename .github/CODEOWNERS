@@ -1,0 +1,8 @@
+**/.github/             @centreon/owners-pipelines
+
+package.json            @centreon/owners-react
+package-lock.json       @centreon/owners-react
+*.ts                    @centreon/owners-react
+*.tsx                   @centreon/owners-react
+*.js                    @centreon/owners-react
+*.jsx                   @centreon/owners-react
