@@ -1,4 +1,4 @@
-**/.github/             @centreon/owners-pipelines
+.github/**             @centreon/owners-pipelines
 
 package.json            @centreon/owners-react
 package-lock.json       @centreon/owners-react
