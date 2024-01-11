@@ -126,7 +126,8 @@ jobs:
 
       - name: Create release
         id: create_release
-        uses: actions/create-release@v1
+        # caution action not maintained since 2021
+        uses: actions/create-release@0cb9c9b65d5d1901c1f53e5e66eaf4afd303e70e # v1.1.4
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
@@ -137,7 +138,8 @@ jobs:
 
       - name: Add plugin to release
         id: upload-plugin-asset
-        uses: actions/upload-release-asset@v1
+        # caution action not maintained since 2021
+        uses: actions/upload-release-asset@e8f9f06c4b078e705bd2ea027f0926603fc9b4d5 # v1.0.2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
@@ -148,7 +150,8 @@ jobs:
 
       - name: Add checksum to release
         id: upload-checksum-asset
-        uses: actions/upload-release-asset@v1
+          # caution action not maintained since 2021
+          uses: actions/upload-release-asset@e8f9f06c4b078e705bd2ea027f0926603fc9b4d5 # v1.0.2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
