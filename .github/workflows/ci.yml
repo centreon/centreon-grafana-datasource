@@ -37,9 +37,9 @@ jobs:
         uses: actions/cache@e12d46a63a90f2fae62d114769bbf2a179198b5c # 3.3.3
         with:
           path: node_modules
-          key: ${{ runner.os }}-${{ matrix.node-version }}-nodemodules-${{ hashFiles('**/yarn.lock') }}
+          key: ${{ runner.os }}-nodemodules-${{ hashFiles('**/yarn.lock') }}
           restore-keys: |
-            ${{ runner.os }}-${{ matrix.node-version }}-nodemodules-
+            ${{ runner.os }}-nodemodules-
 
       - name: Install dependencies
         run: yarn install --frozen-lockfile
@@ -54,7 +54,7 @@ jobs:
         run: |
           if [ -f "Magefile.go" ]
           then
-            echo "::set-output name=has-backend::true"
+            echo "has-backend='true'" >> $GITHUB_OUTPUT
           fi
 
       - name: Setup Go environment
