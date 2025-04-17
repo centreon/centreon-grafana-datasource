@@ -32,8 +32,6 @@ jobs:
         with:
           path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
           key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-yarn-
 
       - name: Cache node_modules
         id: cache-node-modules
@@ -41,8 +39,6 @@ jobs:
         with:
           path: node_modules
           key: ${{ runner.os }}-nodemodules-${{ hashFiles('**/yarn.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-nodemodules-
 
       - name: Install dependencies
         run: yarn install --frozen-lockfile;
