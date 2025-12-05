@@ -9,3 +9,4 @@ package-lock.json       @centreon/owners-react
 
 .gitleaks.toml          @centreon/owners-security
 .gitleaksignore         @centreon/owners-security
+**/secu-*.yml               @centreon/owners-security
