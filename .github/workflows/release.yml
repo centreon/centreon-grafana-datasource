@@ -6,7 +6,11 @@ on:
       - "v*.*.*" # Run workflow on version tags, e.g. v1.0.0.
 
 jobs:
+  dependency-scan:
+    uses: centreon/security-tools/.github/workflows/dependency-analysis.yml@main
+
   release:
+    needs: [dependency-scan]
     runs-on: ubuntu-latest
 
     steps:
